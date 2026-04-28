@@ -188,12 +188,21 @@ Both providers are **France only**. For international, other providers will be a
 
 ### Email (contacts)
 
-| Provider  | File              | Free tier        | Status     |
-| --------- | ----------------- | ---------------- | ---------- |
-| Hunter.io | `email/hunter.ts` | 25 req/month     | Active MVP |
-| Apollo.io | `email/apollo.ts` | 50 credits/month | Backup     |
+| Provider              | File                 | Free tier                                           | Status     |
+| --------------------- | -------------------- | --------------------------------------------------- | ---------- |
+| Firecrawl (composite) | `email/firecrawl.ts` | Shares Firecrawl + Brave Search free tiers          | Active MVP |
+| Apollo.io             | `email/apollo.ts`    | 10 000 credits/month (corporate email signup)       | Available  |
+| Hunter.io             | `email/hunter.ts`    | Requires paid plan — free tier no longer accessible | Reference  |
 
-Both are very limited on the free tier. Monitor as a priority if volume increases.
+**Primary strategy** — `FirecrawlEmailProvider` is a composite provider that reuses the already-present Brave Search and Firecrawl instances:
+
+1. **Brave Search** `site:${domain} email contact` → check result snippets for emails first (no Firecrawl credits)
+2. **Firecrawl scrape** only if snippets yielded nothing — targets pages the search engine already identified as relevant
+3. **Fallback** to common paths (`/contact`, `/equipe`, `/team`, …) if search returns no results
+
+For `findContact(name, domain)`: searches `"name" "@domain"` broadly (email may surface in snippets from directories, GitHub, LinkedIn, etc.) — zero scrape cost when found.
+
+**Apollo** remains available as an alternative adapter if needed. Credit cost: 10 credits per reveal via `people/match`.
 
 ---
 

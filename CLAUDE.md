@@ -100,7 +100,8 @@ import type { SearchProvider } from "@/lib/providers/interfaces/search";
 import { BraveSearchProvider } from "@/lib/providers/search/brave";
 ```
 
-Primary → backup pairs: Brave→SerpAPI, Pappers/SIRENE (both active), Firecrawl→Playwright, Hunter→Apollo, Claude→OpenAI.
+Primary → backup pairs: Brave→SerpAPI, Pappers/SIRENE (both active), Firecrawl→Playwright, Claude→OpenAI.
+Email: FirecrawlEmailProvider (composite — Brave Search + Firecrawl scraper, no dedicated email API).
 
 ### Error Strategy
 

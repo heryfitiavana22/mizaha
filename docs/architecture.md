@@ -19,8 +19,7 @@ User types in natural language
   Claude analyzes and assigns a relevance score + explanation
   ↓
 [Step 4 — enrich]
-  Hunter.io → right contact email
-  Apollo → name, role, LinkedIn profile
+  Brave Search + Firecrawl → contact emails extracted from company pages
   ↓
 Results stored in database (companies, search_companies, contacts)
   ↓
@@ -94,8 +93,9 @@ src/lib/providers/
 ├── scraper/
 │   └── firecrawl.ts   → implements ScraperProvider
 ├── email/
-│   ├── hunter.ts      → implements EmailProvider
-│   └── apollo.ts      → implements EmailProvider (backup)
+│   ├── firecrawl.ts   → implements EmailProvider (composite: Brave + Firecrawl)
+│   ├── apollo.ts      → implements EmailProvider (available alternative)
+│   └── hunter.ts      → implements EmailProvider (reference — requires paid plan)
 └── llm/
     └── vercel.ts      → implements LLMProvider — model injected at runtime
 ```
@@ -158,7 +158,6 @@ Automatically switch to backup without interrupting the pipeline.
 
 ```text
 Brave Search fails → SerpAPI takes over
-Hunter fails → Apollo takes over
 ```
 
 **Level 2 — All providers for a step fail**

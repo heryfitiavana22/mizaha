@@ -1,7 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { PappersCompanyProvider } from "@/lib/providers/company/pappers";
 import { SireneCompanyProvider } from "@/lib/providers/company/sirene";
-import { HunterEmailProvider } from "@/lib/providers/email/hunter";
+import { FirecrawlEmailProvider } from "@/lib/providers/email/firecrawl";
 import { VercelLLMProvider } from "@/lib/providers/llm/vercel";
 import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
 import { BraveSearchProvider } from "@/lib/providers/search/brave";
@@ -33,8 +33,10 @@ export const freelanceConfig: UseCaseConfig = {
       // Playwright backup not yet implemented (Phase 6 MVP only)
     },
     email: {
-      primary: new HunterEmailProvider(),
-      // Apollo backup not yet implemented (Phase 6 MVP only)
+      primary: new FirecrawlEmailProvider(
+        new BraveSearchProvider(),
+        new FirecrawlScraperProvider(),
+      ),
     },
     llm: new VercelLLMProvider(
       anthropic(CLAUDE_HAIKU_MODEL_ID),
