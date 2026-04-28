@@ -26,6 +26,8 @@ Key files:
 - `docs/checklist.md` — build order phases 0–15; check off items as they are completed
 - `docs/tech-stack.md` — all technology decisions and why; update if a tool is added, replaced, or changed
 - `docs/providers.md` — provider interfaces and free tier limits; update if a provider changes
+- `docs/use-cases.md` — use case definitions, qualifying signals, French query examples
+- `docs/project-structure.md` — canonical directory layout and `.env.example` template
 
 ---
 
@@ -65,6 +67,15 @@ extract-criteria → discover → qualify → enrich
 - **Steps** (`src/lib/pipeline/steps/`) receive typed input, return `Result<T>`, have zero side effects — no DB writes, no direct API calls.
 - **Orchestrator** (`pipeline/index.ts`) is the only place that knows step order, writes to DB, updates `pipeline_runs`, and handles provider fallbacks.
 
+### Async API Flow
+
+The pipeline runs in the background (1–5 minutes). The API never blocks:
+
+```text
+POST /api/pipeline  → creates search (status: pending), triggers pipeline async, returns search_id immediately
+GET  /api/searches/[id] → returns status + results; frontend polls until status = completed
+```
+
 ### Provider Abstraction
 
 All external services are accessed through interfaces, never implementations:
@@ -79,6 +90,14 @@ import { BraveSearchProvider } from "@/lib/providers/search/brave";
 
 Primary → backup pairs: Brave→SerpAPI, Pappers/SIRENE (both active), Firecrawl→Playwright, Hunter→Apollo, Claude→OpenAI.
 
+### Error Strategy
+
+Three levels — never crash the full pipeline for a partial error:
+
+1. **Provider fails** → automatically switch to backup (e.g. Brave → SerpAPI)
+2. **All providers for a step fail** → log to `pipeline_runs`, continue with what we have
+3. **One company fails scraping** → skip it, mark error in `data_sources`, continue the rest
+
 ### Result Pattern
 
 Every function that can fail returns `Result<T>` — never throws in business logic:
@@ -87,6 +106,21 @@ Every function that can fail returns `Result<T>` — never throws in business lo
 type Result<T> = { success: true; data: T } | { success: false; error: Error };
 ```
 
+### Generative UI (json-render)
+
+json-render is used at two points. The AI can only use components defined in a catalog — no improvisation:
+
+- `src/lib/ui-generative/catalog/chat.ts` — interactive criteria refinement (checkboxes, sliders, selectors)
+- `src/lib/ui-generative/catalog/results.ts` — adaptive results display (company cards, funding timeline, score)
+
+### Use Case Config Pattern
+
+The pipeline is identical for all use cases. Adding a new use case means creating one config file in `src/lib/use-cases/` and registering it in `index.ts`. The pipeline, providers, and DB do not change.
+
+### Logging
+
+Use `pino` for all structured logging (JSON in prod, pino-pretty in dev). Log every external API call with provider name, duration, and status. Do not use `console.log`.
+
 ### Key Locations
 
 | What                        | Where                                                           |
@@ -94,6 +128,7 @@ type Result<T> = { success: true; data: T } | { success: false; error: Error };
 | DB schema (source of truth) | `src/lib/db/schema.ts`                                          |
 | Env var declarations        | `src/env.ts` — never use `process.env` directly                 |
 | LLM prompts                 | `src/lib/ai/prompts/` — never inline in code                    |
+| Vercel AI SDK tool defs     | `src/lib/ai/tools/`                                             |
 | Use case configs            | `src/lib/use-cases/` — only thing that changes per use case     |
 | Generative UI catalogs      | `src/lib/ui-generative/catalog/`                                |
 | Shared types                | `src/types/index.ts`                                            |
@@ -101,9 +136,11 @@ type Result<T> = { success: true; data: T } | { success: false; error: Error };
 
 ### Test File Naming
 
+Tests live in a `__tests__/` subfolder within the module they test (not a top-level test dir):
+
 ```text
-discover.test.ts      → unit test
-discover.int.test.ts  → integration test (real local DB, mocked providers)
+src/lib/pipeline/steps/__tests__/discover.test.ts      → unit test
+src/lib/pipeline/steps/__tests__/discover.int.test.ts  → integration test (real local DB, mocked providers)
 ```
 
 No E2E tests — they cost real API credits.

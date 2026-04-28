@@ -385,4 +385,3 @@ These are the most common mistakes. Check before each PR.
 | Company deduplication by `domain` before inserting          | In `pipeline/index.ts` after qualify/enrich |
 | Never crash the full pipeline for one company failing       | Error level 3 in qualify step               |
 | No E2E tests (cost real API credits)                        | Test phase                                  |
-| Turborepo: NOT used (single app, not monorepo)              | Never add it                                |
