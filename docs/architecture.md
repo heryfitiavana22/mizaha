@@ -97,7 +97,7 @@ src/lib/providers/
 │   ├── hunter.ts      → implements EmailProvider
 │   └── apollo.ts      → implements EmailProvider (backup)
 └── llm/
-    └── claude.ts      → implements LLMProvider
+    └── vercel.ts      → implements LLMProvider — model injected at runtime
 ```
 
 ### Absolute Rule

@@ -199,10 +199,12 @@ Both are very limited on the free tier. Monitor as a priority if volume increase
 
 ### LLM
 
-| Provider           | File            | Status  |
-| ------------------ | --------------- | ------- |
-| Claude (Anthropic) | `llm/claude.ts` | Primary |
-| OpenAI             | `llm/openai.ts` | Backup  |
+| Provider | File            | Status                                   |
+| -------- | --------------- | ---------------------------------------- |
+| Any      | `llm/vercel.ts` | Single adapter — model passed at runtime |
+
+`VercelLLMProvider` wraps Vercel AI SDK (`generateObject` + `generateText`).
+Switching from Claude to OpenAI = changing the model argument in the use case config, not the adapter.
 
 ---
 

@@ -16,7 +16,11 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.71",
+    "@anthropic-ai/sdk": "^0.91.1",
+    "@mendable/firecrawl-js": "^4.20.0",
     "@t3-oss/env-nextjs": "^0.13.11",
+    "ai": "^6.0.168",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.4",
     "pino": "^10.3.1",

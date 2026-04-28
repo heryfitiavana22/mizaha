@@ -1,8 +1,14 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { env } from "@/env";
+import { generateText, Output } from "ai";
+import type { LanguageModel } from "ai";
 import logger from "@/lib/logger";
-import { buildExtractCriteriaPrompt } from "@/lib/ai/prompts/extract-criteria";
-import { buildQualifyPrompt } from "@/lib/ai/prompts/qualify";
+import {
+  buildExtractCriteriaPrompt,
+  searchCriteriaSchema,
+} from "@/lib/ai/prompts/extract-criteria";
+import {
+  buildQualifyPrompt,
+  qualificationResultSchema,
+} from "@/lib/ai/prompts/qualify";
 import { buildGenerateDraftPrompt } from "@/lib/ai/prompts/generate-draft";
 import type {
   ExtractCriteriaInput,
@@ -12,27 +18,14 @@ import type {
 } from "@/lib/providers/interfaces/llm";
 import type { QualificationResult, Result, SearchCriteria } from "@/types";
 
-const MODEL = "claude-haiku-4-5-20251001";
-const MAX_TOKENS_JSON = 512;
-const MAX_TOKENS_DRAFT = 1024;
+const MAX_OUTPUT_TOKENS_STRUCTURED = 512;
+const MAX_OUTPUT_TOKENS_DRAFT = 1024;
 
-function extractText(response: Anthropic.Message): string {
-  const block = response.content[0];
-  return block?.type === "text" ? block.text : "";
-}
-
-function parseJson<T>(raw: string): T {
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("No JSON object found in LLM response");
-  return JSON.parse(match[0]) as T;
-}
-
-export class ClaudeLLMProvider implements LLMProvider {
-  private readonly client: Anthropic;
-
-  constructor() {
-    this.client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  }
+export class VercelLLMProvider implements LLMProvider {
+  constructor(
+    private readonly model: LanguageModel,
+    private readonly modelName: string,
+  ) {}
 
   async extractCriteria({
     rawQuery,
@@ -41,18 +34,16 @@ export class ClaudeLLMProvider implements LLMProvider {
     const start = Date.now();
 
     try {
-      const prompt = buildExtractCriteriaPrompt({ rawQuery, useCase });
-      const response = await this.client.messages.create({
-        model: MODEL,
-        max_tokens: MAX_TOKENS_JSON,
-        messages: [{ role: "user", content: prompt }],
+      const { output } = await generateText({
+        model: this.model,
+        output: Output.object({ schema: searchCriteriaSchema }),
+        maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
+        prompt: buildExtractCriteriaPrompt({ rawQuery, useCase }),
       });
-
-      const criteria = parseJson<SearchCriteria>(extractText(response));
 
       logger.info(
         {
-          provider: "claude",
+          provider: this.modelName,
           method: "extractCriteria",
           durationMs: Date.now() - start,
           status: "success",
@@ -60,12 +51,12 @@ export class ClaudeLLMProvider implements LLMProvider {
         "API call completed",
       );
 
-      return { success: true, data: criteria };
+      return { success: true, data: output };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error(
         {
-          provider: "claude",
+          provider: this.modelName,
           method: "extractCriteria",
           durationMs: Date.now() - start,
           status: "error",
@@ -84,18 +75,16 @@ export class ClaudeLLMProvider implements LLMProvider {
     const start = Date.now();
 
     try {
-      const prompt = buildQualifyPrompt({ company, criteria });
-      const response = await this.client.messages.create({
-        model: MODEL,
-        max_tokens: MAX_TOKENS_JSON,
-        messages: [{ role: "user", content: prompt }],
+      const { output } = await generateText({
+        model: this.model,
+        output: Output.object({ schema: qualificationResultSchema }),
+        maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
+        prompt: buildQualifyPrompt({ company, criteria }),
       });
-
-      const result = parseJson<QualificationResult>(extractText(response));
 
       logger.info(
         {
-          provider: "claude",
+          provider: this.modelName,
           method: "qualify",
           durationMs: Date.now() - start,
           status: "success",
@@ -103,12 +92,12 @@ export class ClaudeLLMProvider implements LLMProvider {
         "API call completed",
       );
 
-      return { success: true, data: result };
+      return { success: true, data: output };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error(
         {
-          provider: "claude",
+          provider: this.modelName,
           method: "qualify",
           durationMs: Date.now() - start,
           status: "error",
@@ -127,18 +116,15 @@ export class ClaudeLLMProvider implements LLMProvider {
     const start = Date.now();
 
     try {
-      const prompt = buildGenerateDraftPrompt({ contact, companyContext });
-      const response = await this.client.messages.create({
-        model: MODEL,
-        max_tokens: MAX_TOKENS_DRAFT,
-        messages: [{ role: "user", content: prompt }],
+      const { text } = await generateText({
+        model: this.model,
+        maxOutputTokens: MAX_OUTPUT_TOKENS_DRAFT,
+        prompt: buildGenerateDraftPrompt({ contact, companyContext }),
       });
-
-      const draft = extractText(response);
 
       logger.info(
         {
-          provider: "claude",
+          provider: this.modelName,
           method: "generateDraft",
           durationMs: Date.now() - start,
           status: "success",
@@ -146,12 +132,12 @@ export class ClaudeLLMProvider implements LLMProvider {
         "API call completed",
       );
 
-      return { success: true, data: draft };
+      return { success: true, data: text };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error(
         {
-          provider: "claude",
+          provider: this.modelName,
           method: "generateDraft",
           durationMs: Date.now() - start,
           status: "error",

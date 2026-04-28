@@ -142,8 +142,9 @@ For each adapter:
 
 ### LLM
 
-- [x] `src/lib/providers/llm/claude.ts` — implements `LLMProvider`
-  - Use `@anthropic-ai/sdk`
+- [x] `src/lib/providers/llm/vercel.ts` — implements `LLMProvider`
+  - Use Vercel AI SDK (`generateObject` + `generateText`)
+  - Model injected at runtime — switching LLM = changing one argument in use case config
   - All 3 methods: `extractCriteria`, `qualify`, `generateDraft`
 
 ---
@@ -152,16 +153,16 @@ For each adapter:
 
 Prompts are never written inline in code. They live here and are imported.
 
-- [ ] `src/lib/ai/prompts/extract-criteria.ts`
+- [x] `src/lib/ai/prompts/extract-criteria.ts`
   - Input: `rawQuery` (natural language) + `useCase`
   - Output: structured `SearchCriteria` JSON
   - Must handle French queries (see examples in `docs/use-cases.md`)
 
-- [ ] `src/lib/ai/prompts/qualify.ts`
+- [x] `src/lib/ai/prompts/qualify.ts`
   - Input: company data + criteria
   - Output: `{ score: 0.0-1.0, reason: string, matchedSignals: string[] }`
 
-- [ ] `src/lib/ai/prompts/generate-draft.ts`
+- [x] `src/lib/ai/prompts/generate-draft.ts`
   - Input: contact + company context
   - Output: personalized outreach message draft
 
