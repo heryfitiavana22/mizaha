@@ -229,13 +229,13 @@ Input and output types come from `src/types/index.ts`.
 
 ## Phase 11 — Generative UI Catalogs
 
-- [ ] `src/lib/ui-generative/catalog/chat.ts` — allowed components in the criteria chat:
+- [x] `src/lib/ui-generative/catalog/chat.ts` — allowed components in the criteria chat:
   - Checkboxes (sector, signals)
   - Slider (company size, funding)
   - Location selector
   - Tech stack selector
 
-- [ ] `src/lib/ui-generative/catalog/results.ts` — allowed components for results display:
+- [x] `src/lib/ui-generative/catalog/results.ts` — allowed components for results display:
   - Company card (standard)
   - Funding timeline
   - Tech stack badges
