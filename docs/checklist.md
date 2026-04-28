@@ -341,15 +341,15 @@ Reference: `docs/conventions.md` §9
 
 Before calling the MVP done:
 
-- [ ] **End-to-end test**: type a real French query → verify the pipeline runs, results appear in UI
+- [x] **End-to-end test**: type a real French query → verify the pipeline runs, results appear in UI
   - Example: `"Je cherche des startups françaises qui ont besoin d'un dev React"`
   - Verify: criteria extracted correctly, companies found, qualified with score and reason, contact found
-- [ ] **Deduplication**: run the same search twice → verify no duplicate companies in DB
-- [ ] **Pipeline resilience**: disconnect one provider → verify pipeline continues with backup/partial results
-- [ ] **Error tracing**: verify `pipeline_runs` table has entries for each step with correct status and duration
-- [ ] **Env validation**: remove one required env var → verify the app refuses to start with a clear error
-- [ ] **Commit format**: verify commitlint rejects a non-conventional commit message
-- [ ] **Pino logs**: verify logs appear in terminal (pino-pretty in dev), structured JSON in prod mode
+- [x] **Deduplication**: run the same search twice → verify no duplicate companies in DB
+- [x] **Pipeline resilience**: Pappers 401 → SIRENE fallback triggered automatically (confirmed via WARN logs)
+- [x] **Error tracing**: verify `pipeline_runs` table has entries for each step with correct status and duration
+- [x] **Env validation**: remove one required env var → verify the app refuses to start with a clear error
+- [x] **Commit format**: verify commitlint rejects a non-conventional commit message
+- [x] **Pino logs**: verify logs appear in terminal (pino-pretty in dev), structured JSON in prod mode
 
 ---
 

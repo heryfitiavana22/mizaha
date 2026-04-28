@@ -1,4 +1,4 @@
-import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import { PappersCompanyProvider } from "@/lib/providers/company/pappers";
 import { SireneCompanyProvider } from "@/lib/providers/company/sirene";
 import { FirecrawlEmailProvider } from "@/lib/providers/email/firecrawl";
@@ -7,7 +7,7 @@ import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
 import { BraveSearchProvider } from "@/lib/providers/search/brave";
 import type { UseCaseConfig } from "./index";
 
-const CLAUDE_HAIKU_MODEL_ID = "claude-haiku-4-5-20251001";
+const OPENAI_MODEL_ID = "gpt-4o-mini";
 
 export const freelanceConfig: UseCaseConfig = {
   name: "freelance",
@@ -38,9 +38,6 @@ export const freelanceConfig: UseCaseConfig = {
         new FirecrawlScraperProvider(),
       ),
     },
-    llm: new VercelLLMProvider(
-      anthropic(CLAUDE_HAIKU_MODEL_ID),
-      CLAUDE_HAIKU_MODEL_ID,
-    ),
+    llm: new VercelLLMProvider(openai(OPENAI_MODEL_ID), OPENAI_MODEL_ID),
   },
 };

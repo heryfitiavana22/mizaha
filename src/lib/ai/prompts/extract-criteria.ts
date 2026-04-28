@@ -1,18 +1,21 @@
 import { z } from "zod";
 import type { ExtractCriteriaInput } from "@/lib/providers/interfaces/llm";
 
+// OpenAI Structured Outputs: all fields must be in `required` — use .nullable() + transform to keep SearchCriteria types unchanged
 export const searchCriteriaSchema = z.object({
   sector: z
     .string()
-    .optional()
+    .nullable()
+    .transform((v) => v ?? undefined)
     .describe(
-      "Business sector or industry (e.g. SaaS, e-commerce, fintech). Omit if not mentioned.",
+      "Business sector or industry (e.g. SaaS, e-commerce, fintech). Use null if not mentioned.",
     ),
   location: z
     .string()
-    .optional()
+    .nullable()
+    .transform((v) => v ?? undefined)
     .describe(
-      "Geographic location in France (e.g. Paris, Île-de-France, Lyon). Omit if not mentioned.",
+      "Geographic location in France (e.g. Paris, Île-de-France, Lyon). Use null if not mentioned.",
     ),
   signals: z
     .array(z.string())
@@ -21,14 +24,16 @@ export const searchCriteriaSchema = z.object({
     ),
   techStack: z
     .array(z.string())
-    .optional()
+    .nullable()
+    .transform((v) => v ?? undefined)
     .describe(
-      "Technologies explicitly mentioned (e.g. React, Node.js, Python). Omit if none mentioned.",
+      "Technologies explicitly mentioned (e.g. React, Node.js, Python). Use null if none mentioned.",
     ),
   employeeRange: z
     .object({ min: z.number(), max: z.number() })
-    .optional()
-    .describe("Employee count range if mentioned. Omit if not specified."),
+    .nullable()
+    .transform((v) => v ?? undefined)
+    .describe("Employee count range if mentioned. Use null if not specified."),
 });
 
 export function buildExtractCriteriaPrompt({

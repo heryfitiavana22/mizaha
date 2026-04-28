@@ -55,7 +55,7 @@ export class HunterEmailProvider implements EmailProvider {
     try {
       const params = new URLSearchParams({
         domain,
-        api_key: env.HUNTER_API_KEY,
+        api_key: env.HUNTER_API_KEY ?? "",
       });
       const response = await fetch(`${BASE_URL}/domain-search?${params}`);
 
@@ -109,7 +109,7 @@ export class HunterEmailProvider implements EmailProvider {
       const params = new URLSearchParams({
         domain,
         full_name: name,
-        api_key: env.HUNTER_API_KEY,
+        api_key: env.HUNTER_API_KEY ?? "",
       });
       const response = await fetch(`${BASE_URL}/email-finder?${params}`);
 

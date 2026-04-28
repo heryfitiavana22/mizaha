@@ -11,6 +11,7 @@ import {
 import logger from "@/lib/logger";
 import type { UseCaseProviders } from "@/lib/use-cases";
 import { getUseCase } from "@/lib/use-cases";
+import type { CompanyProvider } from "@/lib/providers/interfaces/company";
 import type { Result } from "@/types";
 import type {
   CompanyData,
@@ -326,6 +327,38 @@ async function runExtractCriteria({
   });
 }
 
+// Wraps primary + backup into one CompanyProvider so discover() gets
+// per-call fallback without knowing about the two-provider config.
+function createFallbackCompanyProvider({
+  primary,
+  backup,
+}: {
+  primary: CompanyProvider;
+  backup: CompanyProvider | undefined;
+}): CompanyProvider {
+  if (!backup) return primary;
+  return {
+    findByDomain: async (domain) => {
+      const result = await primary.findByDomain(domain);
+      if (result.success) return result;
+      logger.warn(
+        { domain, error: result.error.message },
+        "Primary company provider failed — trying backup",
+      );
+      return backup.findByDomain(domain);
+    },
+    search: async (criteria) => {
+      const result = await primary.search(criteria);
+      if (result.success) return result;
+      logger.warn(
+        { error: result.error.message },
+        "Primary company provider failed — trying backup",
+      );
+      return backup.search(criteria);
+    },
+  };
+}
+
 async function runDiscover({
   searchId,
   criteria,
@@ -335,6 +368,10 @@ async function runDiscover({
   criteria: SearchCriteria;
   providers: UseCaseProviders;
 }): Promise<Result<CompanyData[]>> {
+  const company = createFallbackCompanyProvider({
+    primary: providers.company.primary,
+    backup: providers.company.backup,
+  });
   return trackStep({
     searchId,
     step: "discover",
@@ -342,8 +379,7 @@ async function runDiscover({
       withFallback({
         primary: providers.search.primary,
         backup: providers.search.backup,
-        run: (search) =>
-          discover({ criteria, search, company: providers.company.primary }),
+        run: (search) => discover({ criteria, search, company }),
       }),
   });
 }

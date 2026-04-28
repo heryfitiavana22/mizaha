@@ -42,6 +42,10 @@ async function resolveCompanies({
     const companyResult = await company.findByDomain(domain);
     if (companyResult.success && companyResult.data) {
       resolved.push(companyResult.data);
+    } else {
+      // Company provider found nothing — keep the domain with minimal data
+      // so qualify can scrape the site and fill in the context
+      resolved.push({ name: result.title, domain, sector: "", location: "" });
     }
   }
 

@@ -52,7 +52,7 @@ describe("discover", () => {
     expect(result.data).toHaveLength(1);
   });
 
-  it("skips URLs where company provider returns null", async () => {
+  it("builds minimal company from search result when provider returns null", async () => {
     const company = makeMockCompanyProvider({
       findByDomain: vi.fn().mockResolvedValue({ success: true, data: null }),
     });
@@ -65,7 +65,11 @@ describe("discover", () => {
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data).toHaveLength(0);
+    // When provider returns null, discover still includes the domain with minimal data
+    // so qualify can scrape the site and fill in the context
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].domain).toBe("acme.fr");
+    expect(result.data[0].name).toBe("Acme SAS");
   });
 
   it("builds query from criteria fields", async () => {

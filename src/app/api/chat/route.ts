@@ -1,10 +1,10 @@
 import { chatCatalog } from "@/lib/ui-generative/catalog/chat";
-import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText } from "ai";
 import type { UIMessage } from "ai";
 import { z } from "zod";
 
-const CHAT_MODEL_ID = "claude-haiku-4-5-20251001";
+const CHAT_MODEL_ID = "gpt-4o-mini";
 
 const CHAT_SYSTEM_RULES = [
   "Respond in the same language as the user (French if they write in French).",
@@ -27,7 +27,7 @@ export async function POST(req: Request): Promise<Response> {
   const messages = parsed.data.messages as UIMessage[];
 
   const result = streamText({
-    model: anthropic(CHAT_MODEL_ID),
+    model: openai(CHAT_MODEL_ID),
     system: chatCatalog.prompt({ customRules: CHAT_SYSTEM_RULES }),
     messages: await convertToModelMessages(messages),
   });
