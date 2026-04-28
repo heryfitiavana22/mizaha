@@ -55,17 +55,17 @@ Knowledge has an expiration date. Verify these tools before implementing against
 - [x] Add commitlint to Husky commit-msg hook
 - [x] Install **pino + pino-pretty**: `pnpm add pino && pnpm add -D pino-pretty`
 - [x] Create `src/lib/logger.ts` — singleton pino logger (JSON in prod, pino-pretty in dev)
-- [ ] First commit: `chore(setup): initialize next.js project with tooling`
+- [x] First commit: `chore(setup): initialize next.js project with tooling`
 
 ---
 
 ## Phase 2 — Environment Variables
 
-- [ ] Copy `.env.example` from `docs/project-structure.md` → create actual `.env.example`
-- [ ] Create `.env.local` (never commit this file — add to `.gitignore`)
-- [ ] Install `@t3-oss/env-nextjs` and `zod`: `pnpm add @t3-oss/env-nextjs zod`
-- [ ] Create `src/env.ts` — declare and validate all env vars (see example in `docs/tech-stack.md`)
-- [ ] Import `env` from `src/env.ts` everywhere env vars are needed — **never use `process.env` directly**
+- [x] Copy `.env.example` from `docs/project-structure.md` → create actual `.env.example`
+- [x] Create `.env.local` (never commit this file — add to `.gitignore`)
+- [x] Install `@t3-oss/env-nextjs` and `zod`: `pnpm add @t3-oss/env-nextjs zod`
+- [x] Create `src/env.ts` — declare and validate all env vars (see example in `docs/tech-stack.md`)
+- [x] Import `env` from `src/env.ts` everywhere env vars are needed — **never use `process.env` directly**
 
 ---
 
