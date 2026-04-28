@@ -37,6 +37,11 @@
       "prettier --write"
     ]
   },
+  "pnpm": {
+    "overrides": {
+      "@opentelemetry/api": "1.9.0"
+    }
+  },
   "devDependencies": {
     "@commitlint/cli": "^20.5.2",
     "@commitlint/config-conventional": "^20.5.0",

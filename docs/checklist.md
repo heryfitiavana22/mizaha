@@ -210,7 +210,7 @@ Input and output types come from `src/types/index.ts`.
 
 ## Phase 10 — Pipeline Orchestrator
 
-- [ ] `src/lib/pipeline/index.ts` — **the only place that knows step order**
+- [x] `src/lib/pipeline/index.ts` — **the only place that knows step order**
 
   Must do all of the following:
   - Accept a `searchId` and `useCase`
