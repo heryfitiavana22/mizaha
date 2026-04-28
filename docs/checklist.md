@@ -247,19 +247,19 @@ Input and output types come from `src/types/index.ts`.
 
 ## Phase 12 — API Routes
 
-- [ ] `src/app/api/chat/route.ts` — streaming chat endpoint (Vercel AI SDK)
+- [x] `src/app/api/chat/route.ts` — streaming chat endpoint (Vercel AI SDK)
   - Uses `LLMProvider.extractCriteria` to extract criteria from conversation
   - Responds with json-render components (from `catalog/chat.ts`) for interactive refinement
   - Stream the response
 
-- [ ] `src/app/api/pipeline/route.ts` — trigger pipeline
+- [x] `src/app/api/pipeline/route.ts` — trigger pipeline
   - `POST`: creates a `searches` row (status: pending), triggers pipeline **in the background**, returns `search_id` immediately
   - The pipeline is async — can take 1-5 minutes
 
-- [ ] `src/app/api/searches/route.ts`
+- [x] `src/app/api/searches/route.ts`
   - `GET /api/searches` — list all searches
 
-- [ ] `src/app/api/searches/[id]/route.ts`
+- [x] `src/app/api/searches/[id]/route.ts`
   - `GET /api/searches/[id]` — return search status + results (used by frontend to poll)
 
 ---

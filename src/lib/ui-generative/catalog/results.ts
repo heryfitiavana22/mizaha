@@ -2,8 +2,7 @@ import { defineCatalog } from "@json-render/core";
 import { schema } from "@json-render/react/schema";
 import { shadcnComponentDefinitions } from "@json-render/shadcn/catalog";
 
-// Components the AI may use when generating the results display UI.
-// Nothing outside this catalog can be generated.
+// Only components listed here can be generated — no improvisation outside this catalog.
 export const resultsCatalog = defineCatalog(schema, {
   components: {
     Stack: shadcnComponentDefinitions.Stack,
