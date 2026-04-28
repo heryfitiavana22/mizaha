@@ -203,7 +203,7 @@ Both are very limited on the free tier. Monitor as a priority if volume increase
 | -------- | --------------- | ---------------------------------------- |
 | Any      | `llm/vercel.ts` | Single adapter — model passed at runtime |
 
-`VercelLLMProvider` wraps Vercel AI SDK (`generateObject` + `generateText`).
+`VercelLLMProvider` wraps Vercel AI SDK (`generateText` + `Output.object()`).
 Switching from Claude to OpenAI = changing the model argument in the use case config, not the adapter.
 
 ---

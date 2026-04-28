@@ -59,8 +59,7 @@
 │   │   │   │   ├── hunter.ts         # → implements EmailProvider
 │   │   │   │   └── apollo.ts         # → implements EmailProvider (backup)
 │   │   │   └── llm/
-│   │   │       ├── claude.ts         # → implements LLMProvider (primary)
-│   │   │       └── openai.ts         # → implements LLMProvider (backup)
+│   │   │       └── vercel.ts         # → implements LLMProvider — model injected at runtime
 │   │   │
 │   │   ├── pipeline/
 │   │   │   ├── steps/
