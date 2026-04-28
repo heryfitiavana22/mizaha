@@ -87,7 +87,7 @@ Knowledge has an expiration date. Verify these tools before implementing against
 
 ## Phase 4 — Shared Types
 
-- [ ] Create `src/types/index.ts` — define all shared types used across the project:
+- [x] Create `src/types/index.ts` — define all shared types used across the project:
   - `Result<T>` type (see `docs/conventions.md` §1)
   - `SearchCriteria`, `CompanyData`, `QualifiedCompany`, `EnrichedCompany`
   - `Contact`, `QualificationResult`, `SearchResult`, `ScrapedContent`
