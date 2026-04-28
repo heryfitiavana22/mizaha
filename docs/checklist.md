@@ -170,12 +170,12 @@ Prompts are never written inline in code. They live here and are imported.
 
 ## Phase 8 — Use Case Configuration
 
-- [ ] `src/lib/use-cases/freelance.ts` — MVP use case config:
+- [x] `src/lib/use-cases/freelance.ts` — MVP use case config:
   - Which signals to look for (see `docs/use-cases.md` §1)
   - Which providers to activate (Brave + Pappers/SIRENE + Firecrawl + Hunter + Claude)
   - Scoring weights
 
-- [ ] `src/lib/use-cases/index.ts` — registry:
+- [x] `src/lib/use-cases/index.ts` — registry:
 
   ```typescript
   export function getUseCase({ name }: { name: string }): UseCaseConfig { ... }
