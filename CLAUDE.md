@@ -16,12 +16,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Source of Truth
 
-`docs/` is the authoritative reference. Read it before touching code. Key files:
+`docs/` is the authoritative reference. **Always read the relevant doc files before touching any code.** When a decision changes, update the corresponding doc file before or alongside the code change. When this file (`CLAUDE.md`) becomes stale — new phases completed, commands added, architecture decisions made — update it.
+
+Key files:
 
 - `docs/conventions.md` — code rules, applied without exception
 - `docs/architecture.md` — pipeline, provider abstraction, error strategy
 - `docs/database.md` — full schema (21 tables)
-- `docs/checklist.md` — build order phases 0–15, current entry point
+- `docs/checklist.md` — build order phases 0–15; check off items as they are completed
+- `docs/tech-stack.md` — all technology decisions and why; update if a tool is added, replaced, or changed
+- `docs/providers.md` — provider interfaces and free tier limits; update if a provider changes
 
 ---
 
