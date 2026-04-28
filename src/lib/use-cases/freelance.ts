@@ -25,8 +25,8 @@ export const freelanceConfig: UseCaseConfig = {
       // SerpAPI backup not yet implemented (Phase 6 MVP only)
     },
     company: {
-      primary: new PappersCompanyProvider(),
-      backup: new SireneCompanyProvider(),
+      primary: new SireneCompanyProvider(),
+      backup: new PappersCompanyProvider(), // BROKEN: always 401 in free
     },
     scraper: {
       primary: new FirecrawlScraperProvider(),
