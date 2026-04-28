@@ -14,6 +14,7 @@ export type ExtractCriteriaInput = {
 export type QualifyInput = {
   company: CompanyData;
   criteria: SearchCriteria;
+  scrapedContent?: string;
 };
 
 export type GenerateDraftInput = {

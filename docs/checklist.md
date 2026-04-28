@@ -188,21 +188,21 @@ Prompts are never written inline in code. They live here and are imported.
 Each step = one pure function. No DB writes. No provider calls except through the interface.
 Input and output types come from `src/types/index.ts`.
 
-- [ ] `src/lib/pipeline/steps/extract-criteria.ts`
+- [x] `src/lib/pipeline/steps/extract-criteria.ts`
   - Signature: `extractCriteria({ rawQuery, useCase, llm }: Options): Promise<Result<SearchCriteria>>`
   - Calls the LLM prompt
 
-- [ ] `src/lib/pipeline/steps/discover.ts`
+- [x] `src/lib/pipeline/steps/discover.ts`
   - Signature: `discover({ criteria, search, company }: Options): Promise<Result<CompanyData[]>>`
   - Calls search provider + company provider
   - Returns merged, deduplicated list
 
-- [ ] `src/lib/pipeline/steps/qualify.ts`
+- [x] `src/lib/pipeline/steps/qualify.ts`
   - Signature: `qualify({ companies, criteria, scraper, llm }: Options): Promise<Result<QualifiedCompany[]>>`
   - Calls scraper then LLM for each company
   - **Error level 3**: if one company fails scraping, skip it and continue
 
-- [ ] `src/lib/pipeline/steps/enrich.ts`
+- [x] `src/lib/pipeline/steps/enrich.ts`
   - Signature: `enrich({ companies, email }: Options): Promise<Result<EnrichedCompany[]>>`
   - Calls email provider for each company
 

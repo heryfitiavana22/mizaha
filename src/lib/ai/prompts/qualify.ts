@@ -19,15 +19,21 @@ export const qualificationResultSchema = z.object({
     ),
 });
 
+const MAX_SCRAPED_CONTENT_CHARS = 3000;
+
 export function buildQualifyPrompt({
   company,
   criteria,
+  scrapedContent,
 }: QualifyInput): string {
   const techLine = criteria.techStack?.length
     ? `\n- Tech stack required: ${criteria.techStack.join(", ")}`
     : "";
   const rangeLine = criteria.employeeRange
     ? `\n- Employee count: between ${criteria.employeeRange.min} and ${criteria.employeeRange.max}`
+    : "";
+  const scrapedLine = scrapedContent
+    ? `\n\nWebsite content (scraped):\n${scrapedContent.slice(0, MAX_SCRAPED_CONTENT_CHARS)}`
     : "";
 
   return `You are a B2B lead qualification assistant. Evaluate how well this company matches the search criteria.
@@ -37,7 +43,7 @@ Company:
 - Domain: ${company.domain}
 - Sector: ${company.sector || "unknown"}
 - Location: ${company.location || "unknown"}
-${company.employeeCount ? `- Employees: ${company.employeeCount}` : ""}
+${company.employeeCount ? `- Employees: ${company.employeeCount}` : ""}${scrapedLine}
 
 Search criteria:
 - Sector: ${criteria.sector ?? "any"}
@@ -50,6 +56,6 @@ Scoring guide:
 - 0.7–0.9: strong match, most criteria confirmed
 - 1.0: perfect match
 
-Only list signals in matchedSignals that are actually confirmed by the company data.
+Only list signals in matchedSignals that are actually confirmed by the company data or website content.
 Write the reason in French — it will be shown directly to the user.`;
 }
