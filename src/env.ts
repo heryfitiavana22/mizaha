@@ -15,8 +15,11 @@ export const env = createEnv({
     APOLLO_API_KEY: z.string().optional(),
     SERP_API_KEY: z.string().optional(),
   },
-  client: {},
+  client: {
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  },
   runtimeEnv: {
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NODE_ENV: process.env.NODE_ENV,
     DATABASE_URL: process.env.DATABASE_URL,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,

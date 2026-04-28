@@ -268,11 +268,11 @@ Input and output types come from `src/types/index.ts`.
 
 ### Pages
 
-- [ ] `src/app/(dashboard)/searches/new/page.tsx` — new search, chat interface
-- [ ] `src/app/(dashboard)/searches/[id]/page.tsx` — results of a specific search
+- [x] `src/app/(dashboard)/searches/new/page.tsx` — new search, chat interface
+- [x] `src/app/(dashboard)/searches/[id]/page.tsx` — results of a specific search
   - Polls `GET /api/searches/[id]` until status = completed
-- [ ] `src/app/(dashboard)/companies/page.tsx` — global company view
-- [ ] `src/app/layout.tsx` — root layout
+- [x] `src/app/(dashboard)/companies/page.tsx` — global company view
+- [x] `src/app/layout.tsx` — root layout
 
 ### Components
 
@@ -280,22 +280,22 @@ Input and output types come from `src/types/index.ts`.
 
 **Chat components** (`src/components/chat/`):
 
-- [ ] `chat-input.tsx` — natural language input field
-- [ ] `chat-message.tsx` — single message display
-- [ ] `criteria-display.tsx` — shows extracted criteria
-- [ ] `json-render-wrapper.tsx` — wraps json-render for interactive criteria
+- [x] `chat-input.tsx` — natural language input field
+- [x] `chat-message.tsx` — single message display
+- [x] `criteria-display.tsx` — shows extracted criteria
+- [x] `json-render-wrapper.tsx` — wraps json-render for interactive criteria
 
 **Company components** (`src/components/companies/`):
 
-- [ ] `company-card.tsx` — single company card
-- [ ] `company-list.tsx` — list of company cards
-- [ ] `relevance-score.tsx` — visual score display
-- [ ] `contact-info.tsx` — contact name, email, LinkedIn
+- [x] `company-card.tsx` — single company card
+- [x] `company-list.tsx` — list of company cards
+- [x] `relevance-score.tsx` — visual score display
+- [x] `contact-info.tsx` — contact name, email, LinkedIn
 
 **UI base** (`src/components/ui/`):
 
-- [ ] Install shadcn/ui: `pnpm dlx shadcn@latest init`
-- [ ] Add needed components (button, card, badge, slider, etc.)
+- [x] Install shadcn/ui: `pnpm dlx shadcn@latest init`
+- [x] Add needed components (button, card, badge, slider, etc.)
 
 ---
 
