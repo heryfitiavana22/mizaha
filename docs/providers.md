@@ -151,7 +151,7 @@ type QualificationResult = {
 
 | Provider       | File                 | Free tier       | Status     |
 | -------------- | -------------------- | --------------- | ---------- |
-| Pappers        | `company/pappers.ts` | Generous        | Active MVP |
+| Pappers        | `company/pappers.ts` | 100 req/month   | Active MVP |
 | SIRENE / INSEE | `company/sirene.ts`  | Completely free | Active MVP |
 
 **SIRENE** is the official French registry — complete legal data, free.
@@ -165,7 +165,7 @@ Both providers are **France only**. For international, other providers will be a
 
 | Provider   | File                    | Free tier          | Status                           |
 | ---------- | ----------------------- | ------------------ | -------------------------------- |
-| Firecrawl  | `scraper/firecrawl.ts`  | 500 credits/month  | Active MVP                       |
+| Firecrawl  | `scraper/firecrawl.ts`  | 500 credits one-time | Active MVP                       |
 | Playwright | `scraper/playwright.ts` | Free (self-hosted) | Backup if Firecrawl insufficient |
 
 **Firecrawl** first — simple API, good extraction.
@@ -199,8 +199,8 @@ Both are very limited on the free tier. Monitor as a priority if volume increase
 | ------------ | ----------------- | ------------------- |
 | Brave Search | 2,000 req/month   | Low                 |
 | SIRENE       | Unlimited         | None                |
-| Pappers      | Generous          | Low                 |
-| Firecrawl    | 500 credits/month | Medium              |
+| Pappers      | 100 req/month     | Medium              |
+| Firecrawl    | 500 credits one-time | High — one-time only |
 | Hunter.io    | 25 req/month      | High — very limited |
 | Apollo.io    | 50 credits/month  | High — very limited |
 

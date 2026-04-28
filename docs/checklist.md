@@ -27,15 +27,15 @@ Full list: `docs/conventions.md`
 
 Knowledge has an expiration date. Verify these tools before implementing against them.
 
-- [ ] **json-render** (`json-render.dev`) — does it exist? API still valid? How to install?
-- [ ] **AI Elements** (`elements.ai-sdk.dev`) — does it exist? Is it compatible with current Vercel AI SDK version?
-- [ ] **Streamdown** (`streamdown.ai`) — does it exist? Still maintained?
-- [ ] **Firecrawl** — free tier still 500 credits/month? API unchanged?
-- [ ] **Hunter.io** — free tier still 25 req/month? API unchanged?
-- [ ] **Pappers** — free tier still available? Endpoints unchanged?
-- [ ] **@t3-oss/env-nextjs** — still the recommended approach for Next.js env validation?
-- [ ] **Vercel AI SDK** — current major version? Any breaking changes?
-- [ ] **Drizzle ORM + pgvector** — current approach for vector columns?
+- [x] **json-render** (`json-render.dev`) — existe, packages `@json-render/core @json-render/react @json-render/shadcn`, requiert Zod v4
+- [x] **AI Elements** (`elements.ai-sdk.dev`) — existe, `ai-elements` v1.9.0, compatible AI SDK v6
+- [x] **Streamdown** (`streamdown.ai`) — existe, v2.1.0, `npm i streamdown`
+- [x] **Firecrawl** — ⚠️ 500 crédits one-time (pas mensuel) — docs/providers.md mis à jour
+- [x] **Hunter.io** — 25 searches + 50 verifications/mois, confirmé
+- [x] **Pappers** — ⚠️ 100 req/mois (pas "généreux") — docs/providers.md mis à jour
+- [x] **@t3-oss/env-nextjs** — toujours recommandé, v0.13.0
+- [x] **Vercel AI SDK** — v6 stable actuel, v7 en beta, pas de breaking changes majeurs
+- [x] **Drizzle ORM + pgvector** — `vector()` column stable depuis drizzle-orm@0.31.0
 
 > If any tool has changed significantly: update `docs/tech-stack.md` before continuing.
 > If a tool no longer exists: discuss before picking a replacement.
