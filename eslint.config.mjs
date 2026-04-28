@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // External skill files pulled from upstream repos
+    ".agents/**",
   ]),
   {
     rules: {

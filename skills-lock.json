@@ -1,11 +1,41 @@
 {
   "version": 1,
   "skills": {
+    "ai-elements": {
+      "source": "vercel/ai-elements",
+      "sourceType": "github",
+      "skillPath": "skills/ai-elements/SKILL.md",
+      "computedHash": "7e81acdd3028bb68aa4387b2bd083c5812a50e2be1bea08c76994dcfb8f6a3d3"
+    },
     "ai-sdk": {
       "source": "vercel/ai",
       "sourceType": "github",
       "skillPath": "skills/use-ai-sdk/SKILL.md",
       "computedHash": "81af098a4ce6f0e323c1bd02b8e79df3bbaed57cbf1c4060f58ddc95de5545a1"
+    },
+    "json-render-core": {
+      "source": "vercel-labs/json-render",
+      "sourceType": "github",
+      "skillPath": "skills/core/SKILL.md",
+      "computedHash": "8cff0bce16c16090f2b822e7083f24416a45d3d69757475a041c5ee672ee2d6f"
+    },
+    "json-render-react": {
+      "source": "vercel-labs/json-render",
+      "sourceType": "github",
+      "skillPath": "skills/react/SKILL.md",
+      "computedHash": "67d6daabd85c23cc58eeabea56f25b899723932dfb69c55ddae4990b43c918d2"
+    },
+    "json-render-shadcn": {
+      "source": "vercel-labs/json-render",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "d6a9be8eeedea18343b5b15d6ac481a55436fe40db4b65d59858388072c239c4"
+    },
+    "json-render-zustand": {
+      "source": "vercel-labs/json-render",
+      "sourceType": "github",
+      "skillPath": "skills/zustand/SKILL.md",
+      "computedHash": "ecf89b93e27bb9283f373a65eeda302dac1bf89575ecd53edbaef53dc1a743f8"
     },
     "shadcn": {
       "source": "shadcn/ui",
