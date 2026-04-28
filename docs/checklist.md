@@ -71,34 +71,17 @@ Knowledge has an expiration date. Verify these tools before implementing against
 
 ## Phase 3 — Docker + Database
 
-- [ ] Create `docker-compose.yml`:
-
-  ```yaml
-  services:
-    db:
-      image: pgvector/pgvector:pg16
-      environment:
-        POSTGRES_DB: mizaha
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: password
-      ports:
-        - "5432:5432"
-      volumes:
-        - pgdata:/var/lib/postgresql/data
-  volumes:
-    pgdata:
-  ```
-
-- [ ] Start the container: `docker compose up -d`
-- [ ] Install Drizzle: `pnpm add drizzle-orm postgres && pnpm add -D drizzle-kit`
-- [ ] Create `drizzle.config.ts`
-- [ ] Create `src/lib/db/index.ts` — PostgreSQL connection client
-- [ ] Create `src/lib/db/schema.ts` — translate ALL 21 tables from `docs/database.md`
-  - **Critical**: enable pgvector extension in a migration: `CREATE EXTENSION IF NOT EXISTS vector;`
-  - Use Drizzle's vector column type for `company_embeddings.embedding`
-  - Tables marked "Schema created, not used" in MVP: still create the schema, just don't use them
-- [ ] Run first migration: `pnpm drizzle-kit generate && pnpm drizzle-kit migrate`
-- [ ] Verify schema in DB (connect and check tables exist)
+- [x] Create `docker-compose.yml` (port 5434 — local conflict avoidance)
+- [x] Start the container: `docker compose up -d`
+- [x] Install Drizzle: `pnpm add drizzle-orm postgres && pnpm add -D drizzle-kit`
+- [x] Create `drizzle.config.ts` (dotenv loads .env.local — drizzle-kit ne le charge pas nativement)
+- [x] Create `src/lib/db/index.ts` — PostgreSQL connection client
+- [x] Create `src/lib/db/schema.ts` — 21 tables traduites depuis `docs/database.md`
+  - `CREATE EXTENSION IF NOT EXISTS vector;` ajouté en tête de migration
+  - `vector('embedding', { dimensions: 1536 })` pour company_embeddings
+  - Toutes les tables "Schema created, not used" créées
+- [x] Run first migration: `pnpm drizzle-kit generate && pnpm drizzle-kit migrate`
+- [x] Verify schema in DB — 21 tables + extension vector confirmées
 
 ---
 

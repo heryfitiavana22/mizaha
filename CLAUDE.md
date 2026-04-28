@@ -46,10 +46,12 @@ pnpm build        # production build
 pnpm lint         # ESLint
 pnpm typecheck    # TypeScript type check
 
-# Database (once Phase 3 is set up)
-docker compose up -d                          # start PostgreSQL + pgvector
-pnpm drizzle-kit generate                     # generate migration from schema
-pnpm drizzle-kit migrate                      # apply migrations
+# Database
+pnpm db:start     # start PostgreSQL + pgvector (Docker)
+pnpm db:stop      # stop the container
+pnpm db:generate  # generate migration from schema changes
+pnpm db:migrate   # apply pending migrations
+pnpm db:studio    # open Drizzle Studio (DB browser)
 
 # Tests (once Phase 14 is set up — Vitest)
 pnpm test                                     # run all unit tests
