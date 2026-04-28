@@ -20,6 +20,7 @@ Types live in `src/lib/providers/interfaces/search.ts`.
 // SearchResult — in src/types/index.ts (used across pipeline)
 
 interface SearchProvider {
+  readonly name: string;
   search(input: SearchInput): Promise<Result<SearchResult[]>>;
 }
 
@@ -38,6 +39,7 @@ Types live in `src/lib/providers/interfaces/company.ts`.
 // CompanyCriteria — in interfaces/company.ts
 
 interface CompanyProvider {
+  readonly name: string;
   findByDomain(domain: string): Promise<Result<CompanyData | null>>;
   search(criteria: CompanyCriteria): Promise<Result<CompanyData[]>>;
 }
@@ -72,6 +74,7 @@ Types live in `src/lib/providers/interfaces/scraper.ts`.
 // ScrapedContent — in interfaces/scraper.ts
 
 interface ScraperProvider {
+  readonly name: string;
   scrape(url: string): Promise<Result<ScrapedContent>>;
 }
 
@@ -94,6 +97,7 @@ Types live in `src/lib/providers/interfaces/email.ts`.
 // FindContactInput — in interfaces/email.ts
 
 interface EmailProvider {
+  readonly name: string;
   findByDomain(domain: string): Promise<Result<Contact[]>>;
   findContact(input: FindContactInput): Promise<Result<Contact | null>>;
 }
@@ -120,6 +124,7 @@ Types live in `src/lib/providers/interfaces/llm.ts`.
 ```typescript
 // ExtractCriteriaInput, QualifyInput, GenerateDraftInput — in interfaces/llm.ts
 interface LLMProvider {
+  readonly name: string;
   extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
   qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
   generateDraft(input: GenerateDraftInput): Promise<Result<string>>;

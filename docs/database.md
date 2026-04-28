@@ -263,6 +263,8 @@ step          text        not null   -- extract-criteria | discover | qualify | 
 status        text        not null   -- running | completed | failed
 error         text        -- error message if failed
 duration_ms   integer     -- duration in milliseconds
+input_data    jsonb       -- step input snapshot (rawQuery, criteria, company list…)
+output_data   jsonb       -- step output snapshot (extracted criteria, scores, contacts…)
 created_at    timestamp   default now()
 ```
 

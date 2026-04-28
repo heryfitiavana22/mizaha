@@ -8,5 +8,6 @@ export type ScrapedContent = {
 };
 
 export interface ScraperProvider {
+  readonly name: string;
   scrape(url: string): Promise<Result<ScrapedContent>>;
 }

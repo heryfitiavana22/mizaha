@@ -7,7 +7,7 @@ import type { CompanyData, Result } from "@/types";
 
 // Open data — no auth required, 7 req/s rate limit
 const BASE_URL = "https://recherche-entreprises.api.gouv.fr/search";
-const DEFAULT_RESULTS_LIMIT = 10;
+const DEFAULT_RESULTS_LIMIT = 3;
 
 type SireneEtablissement = {
   nom_complet?: string;
@@ -58,6 +58,8 @@ async function fetchSirene({
 }
 
 export class SireneCompanyProvider implements CompanyProvider {
+  readonly name = "SIRENE";
+
   async findByDomain(domain: string): Promise<Result<CompanyData | null>> {
     const start = Date.now();
     // SIRENE has no domain-based lookup — derive name from domain as best-effort

@@ -221,6 +221,8 @@ export const pipelineRuns = pgTable("pipeline_runs", {
   status: text("status").notNull(), // running | completed | failed
   error: text("error"),
   durationMs: integer("duration_ms"),
+  inputData: jsonb("input_data"),
+  outputData: jsonb("output_data"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

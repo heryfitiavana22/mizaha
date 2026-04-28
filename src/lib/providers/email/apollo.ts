@@ -76,6 +76,8 @@ async function revealContactById({
 }
 
 export class ApolloEmailProvider implements EmailProvider {
+  readonly name = "Apollo";
+
   async findByDomain(domain: string): Promise<Result<Contact[]>> {
     const start = Date.now();
 

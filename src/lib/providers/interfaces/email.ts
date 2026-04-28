@@ -6,6 +6,7 @@ export type FindContactInput = {
 };
 
 export interface EmailProvider {
+  readonly name: string;
   findByDomain(domain: string): Promise<Result<Contact[]>>;
   findContact(input: FindContactInput): Promise<Result<Contact | null>>;
 }

@@ -11,6 +11,7 @@ export function makeMockSearchProvider(
   overrides?: Partial<SearchProvider>,
 ): SearchProvider {
   return {
+    name: "MockSearch",
     search: vi.fn().mockResolvedValue({
       success: true,
       data: [
@@ -25,6 +26,7 @@ export function makeMockCompanyProvider(
   overrides?: Partial<CompanyProvider>,
 ): CompanyProvider {
   return {
+    name: "MockCompany",
     findByDomain: vi
       .fn()
       .mockResolvedValue({ success: true, data: fakeCompany }),
@@ -37,6 +39,7 @@ export function makeMockScraperProvider(
   overrides?: Partial<ScraperProvider>,
 ): ScraperProvider {
   return {
+    name: "MockScraper",
     scrape: vi.fn().mockResolvedValue({
       success: true,
       data: {
@@ -54,6 +57,7 @@ export function makeMockEmailProvider(
   overrides?: Partial<EmailProvider>,
 ): EmailProvider {
   return {
+    name: "MockEmail",
     findByDomain: vi.fn().mockResolvedValue({
       success: true,
       data: [
@@ -74,6 +78,7 @@ export function makeMockLLMProvider(
   overrides?: Partial<LLMProvider>,
 ): LLMProvider {
   return {
+    name: "MockLLM",
     extractCriteria: vi
       .fn()
       .mockResolvedValue({ success: true, data: fakeCriteria }),

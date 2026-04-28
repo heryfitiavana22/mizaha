@@ -2,12 +2,13 @@ import { db } from "@/lib/db";
 import {
   companies as companiesTable,
   contacts as contactsTable,
+  pipelineRuns as pipelineRunsTable,
   searchCompanies as searchCompaniesTable,
   searches as searchesTable,
 } from "@/lib/db/schema";
 import logger from "@/lib/logger";
 import type { Result } from "@/types";
-import { desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -72,6 +73,23 @@ async function fetchCompanyRows({ searchId }: { searchId: string }): Promise<
   }
 }
 
+async function fetchPipelineRuns({
+  searchId,
+}: {
+  searchId: string;
+}): Promise<Result<(typeof pipelineRunsTable.$inferSelect)[]>> {
+  try {
+    const rows = await db
+      .select()
+      .from(pipelineRunsTable)
+      .where(eq(pipelineRunsTable.searchId, searchId))
+      .orderBy(asc(pipelineRunsTable.createdAt));
+    return { success: true, data: rows };
+  } catch (error) {
+    return { success: false, error: toError(error) };
+  }
+}
+
 async function fetchContacts({
   companyIds,
 }: {
@@ -126,6 +144,15 @@ export async function GET(
     return Response.json({ error: "Database unavailable" }, { status: 503 });
   }
 
+  const pipelineRunsResult = await fetchPipelineRuns({ searchId: id });
+  if (!pipelineRunsResult.success) {
+    logger.error(
+      { searchId: id, error: pipelineRunsResult.error.message },
+      "Failed to fetch pipeline runs",
+    );
+    return Response.json({ error: "Database unavailable" }, { status: 503 });
+  }
+
   const results = companyRowsResult.data.map((row) => ({
     ...row,
     contacts: contactsResult.data.filter(
@@ -133,5 +160,9 @@ export async function GET(
     ),
   }));
 
-  return Response.json({ search: searchResult.data, results });
+  return Response.json({
+    search: searchResult.data,
+    results,
+    pipelineRuns: pipelineRunsResult.data,
+  });
 }

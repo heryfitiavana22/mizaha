@@ -24,6 +24,7 @@ export type GenerateDraftInput = {
 };
 
 export interface LLMProvider {
+  readonly name: string;
   extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
   qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
   generateDraft(input: GenerateDraftInput): Promise<Result<string>>;

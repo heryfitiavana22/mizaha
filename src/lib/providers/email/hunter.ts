@@ -49,6 +49,8 @@ function toContact(email: HunterEmail): Contact | null {
 }
 
 export class HunterEmailProvider implements EmailProvider {
+  readonly name = "Hunter";
+
   async findByDomain(domain: string): Promise<Result<Contact[]>> {
     const start = Date.now();
 

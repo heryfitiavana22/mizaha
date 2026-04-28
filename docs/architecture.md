@@ -29,7 +29,7 @@ Results stored in database (companies, search_companies, contacts)
   json-render adapts the layout based on the search context
 ```
 
-Each step is traced in `pipeline_runs` (step, status, duration, error if any).
+Each step is traced in `pipeline_runs` (step, status, duration, error if any, input_data, output_data).
 
 ---
 

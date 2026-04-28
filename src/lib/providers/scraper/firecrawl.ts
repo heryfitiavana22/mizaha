@@ -8,6 +8,7 @@ import type {
 import type { Result } from "@/types";
 
 export class FirecrawlScraperProvider implements ScraperProvider {
+  readonly name = "Firecrawl";
   private readonly client: FirecrawlApp;
 
   constructor() {

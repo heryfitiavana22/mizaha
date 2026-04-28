@@ -7,7 +7,7 @@ import type {
 import type { Result, SearchResult } from "@/types";
 
 const BASE_URL = "https://api.search.brave.com/res/v1/web/search";
-const DEFAULT_SEARCH_LIMIT = 10;
+const DEFAULT_SEARCH_LIMIT = 3;
 
 type BraveResult = {
   url: string;
@@ -24,6 +24,8 @@ function isBraveResponse(data: unknown): data is BraveResponse {
 }
 
 export class BraveSearchProvider implements SearchProvider {
+  readonly name = "Brave Search";
+
   async search({
     query,
     options,

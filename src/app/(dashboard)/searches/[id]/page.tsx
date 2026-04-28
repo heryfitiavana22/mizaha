@@ -5,6 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyList } from "@/components/companies/company-list";
 import { StatusBadge } from "@/components/companies/status-badge";
 import type { CompanyResult } from "@/components/companies/company-card";
+import { PipelineSteps } from "@/components/pipeline/pipeline-steps";
+import type { PipelineRun } from "@/components/pipeline/types";
 
 type SearchStatus = "pending" | "running" | "completed" | "failed";
 
@@ -17,6 +19,7 @@ type SearchData = {
     createdAt: string | null;
   };
   results: CompanyResult[];
+  pipelineRuns: PipelineRun[];
 };
 
 const POLL_INTERVAL_MS = 4000;
@@ -82,7 +85,7 @@ export default function SearchResultsPage({ params }: PageProps) {
     );
   }
 
-  const { search, results } = data;
+  const { search, results, pipelineRuns } = data;
   const status = search.status as SearchStatus | null;
   const isPending = status === "pending" || status === "running";
 
@@ -99,6 +102,8 @@ export default function SearchResultsPage({ params }: PageProps) {
           </p>
         )}
       </div>
+
+      <PipelineSteps runs={pipelineRuns} />
 
       {isPending && (
         <div className="flex flex-col gap-4">

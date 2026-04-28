@@ -8,6 +8,7 @@ export type CompanyCriteria = {
 };
 
 export interface CompanyProvider {
+  readonly name: string;
   findByDomain(domain: string): Promise<Result<CompanyData | null>>;
   search(criteria: CompanyCriteria): Promise<Result<CompanyData[]>>;
 }

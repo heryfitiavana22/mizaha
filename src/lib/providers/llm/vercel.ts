@@ -22,10 +22,14 @@ const MAX_OUTPUT_TOKENS_STRUCTURED = 512;
 const MAX_OUTPUT_TOKENS_DRAFT = 1024;
 
 export class VercelLLMProvider implements LLMProvider {
+  readonly name: string;
+
   constructor(
     private readonly model: LanguageModel,
     private readonly modelName: string,
-  ) {}
+  ) {
+    this.name = modelName;
+  }
 
   async extractCriteria({
     rawQuery,

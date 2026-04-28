@@ -97,15 +97,22 @@ async function fetchSearch({
 async function startStepRun({
   searchId,
   step,
+  inputData,
 }: {
   searchId: string;
   step: PipelineStep;
+  inputData?: Record<string, unknown>;
 }): Promise<Result<StepRunRecord>> {
   try {
     const start = Date.now();
     const [run] = await db
       .insert(pipelineRunsTable)
-      .values({ searchId, step, status: "running" })
+      .values({
+        searchId,
+        step,
+        status: "running",
+        inputData: inputData ?? null,
+      })
       .returning({ id: pipelineRunsTable.id });
     return { success: true, data: { runId: run.id, start } };
   } catch (error) {
@@ -116,14 +123,20 @@ async function startStepRun({
 async function completeStepRun({
   runId,
   start,
+  outputData,
 }: {
   runId: string;
   start: number;
+  outputData?: Record<string, unknown>;
 }): Promise<Result<undefined>> {
   try {
     await db
       .update(pipelineRunsTable)
-      .set({ status: "completed", durationMs: Date.now() - start })
+      .set({
+        status: "completed",
+        durationMs: Date.now() - start,
+        outputData: outputData ?? null,
+      })
       .where(eq(pipelineRunsTable.id, runId));
     return { success: true, data: undefined };
   } catch (error) {
@@ -270,14 +283,17 @@ async function withFallback<TProvider, TData>({
   primary,
   backup,
   run,
+  onFallback,
 }: {
   primary: TProvider;
   backup: TProvider | undefined;
   run: (provider: TProvider) => Promise<Result<TData>>;
+  onFallback?: () => void;
 }): Promise<Result<TData>> {
   const primaryResult = await run(primary);
   if (primaryResult.success || !backup) return primaryResult;
   logger.warn("Primary provider failed — trying backup");
+  onFallback?.();
   return run(backup);
 }
 
@@ -287,13 +303,17 @@ async function withFallback<TProvider, TData>({
 async function trackStep<TData>({
   searchId,
   step,
+  inputData,
   run,
+  serializeOutput,
 }: {
   searchId: string;
   step: PipelineStep;
+  inputData?: Record<string, unknown>;
   run: () => Promise<Result<TData>>;
+  serializeOutput?: (data: TData) => Record<string, unknown>;
 }): Promise<Result<TData>> {
-  const startResult = await startStepRun({ searchId, step });
+  const startResult = await startStepRun({ searchId, step, inputData });
   if (!startResult.success) {
     logger.error(
       { searchId, step, error: startResult.error.message },
@@ -306,7 +326,10 @@ async function trackStep<TData>({
   if (startResult.success) {
     const { runId, start } = startResult.data;
     if (result.success) {
-      await completeStepRun({ runId, start });
+      const outputData = serializeOutput
+        ? serializeOutput(result.data)
+        : undefined;
+      await completeStepRun({ runId, start, outputData });
     } else {
       await failStepRun({ runId, start, error: result.error.message });
     }
@@ -334,8 +357,16 @@ async function runExtractCriteria({
   return trackStep({
     searchId,
     step: "extract-criteria",
+    inputData: {
+      rawQuery,
+      useCase: useCaseName,
+      uiCriteria: uiCriteria ?? {},
+      providers: { llm: llm.name },
+    },
     run: () =>
       extractCriteria({ rawQuery, useCase: useCaseName, llm, uiCriteria }),
+    serializeOutput: (criteria) =>
+      criteria as unknown as Record<string, unknown>,
   });
 }
 
@@ -350,6 +381,7 @@ function createFallbackCompanyProvider({
 }): CompanyProvider {
   if (!backup) return primary;
   return {
+    name: `${primary.name} + ${backup.name}`,
     findByDomain: async (domain) => {
       const result = await primary.findByDomain(domain);
       if (result.success) return result;
@@ -384,15 +416,39 @@ async function runDiscover({
     primary: providers.company.primary,
     backup: providers.company.backup,
   });
+  let usedSearchFallback = false;
   return trackStep({
     searchId,
     step: "discover",
+    inputData: {
+      ...(criteria as unknown as Record<string, unknown>),
+      providers: {
+        search: providers.search.primary.name,
+        searchBackup: providers.search.backup?.name ?? null,
+        company: providers.company.primary.name,
+        companyBackup: providers.company.backup?.name ?? null,
+      },
+    },
     run: () =>
       withFallback({
         primary: providers.search.primary,
         backup: providers.search.backup,
         run: (search) => discover({ criteria, search, company }),
+        onFallback: () => {
+          usedSearchFallback = true;
+        },
       }),
+    serializeOutput: (companies) => ({
+      count: companies.length,
+      usedSearchFallback,
+      companies: companies.map((c) => ({
+        name: c.name,
+        domain: c.domain,
+        sector: c.sector,
+        location: c.location,
+        employeeCount: c.employeeCount ?? null,
+      })),
+    }),
   });
 }
 
@@ -410,6 +466,15 @@ async function runQualify({
   return trackStep({
     searchId,
     step: "qualify",
+    inputData: {
+      count: companies.length,
+      companies: companies.map((c) => ({ name: c.name, domain: c.domain })),
+      providers: {
+        scraper: providers.scraper.primary.name,
+        scraperBackup: providers.scraper.backup?.name ?? null,
+        llm: providers.llm.name,
+      },
+    },
     run: () =>
       qualify({
         companies,
@@ -417,6 +482,16 @@ async function runQualify({
         scraper: providers.scraper.primary,
         llm: providers.llm,
       }),
+    serializeOutput: (qualified) => ({
+      count: qualified.length,
+      companies: qualified.map((c) => ({
+        name: c.name,
+        domain: c.domain,
+        score: c.qualification.score,
+        reason: c.qualification.reason,
+        matchedSignals: c.qualification.matchedSignals,
+      })),
+    }),
   });
 }
 
@@ -432,7 +507,29 @@ async function runEnrich({
   return trackStep({
     searchId,
     step: "enrich",
+    inputData: {
+      count: companies.length,
+      companies: companies.map((c) => ({
+        name: c.name,
+        domain: c.domain,
+        score: c.qualification.score,
+      })),
+      providers: { email: providers.email.primary.name },
+    },
     run: () => enrich({ companies, email: providers.email.primary }),
+    serializeOutput: (enriched) => ({
+      count: enriched.length,
+      companies: enriched.map((c) => ({
+        name: c.name,
+        domain: c.domain,
+        contactCount: c.contacts.length,
+        contacts: c.contacts.map((ct) => ({
+          email: ct.email,
+          name: ct.name ?? null,
+          title: ct.title ?? null,
+        })),
+      })),
+    }),
   });
 }
 

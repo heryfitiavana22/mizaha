@@ -144,10 +144,14 @@ async function scrapePageSet({
 // Strategy: check search snippets first (zero scrape credits), then scrape
 // only pages the search engine already identified as relevant.
 export class FirecrawlEmailProvider implements EmailProvider {
+  readonly name: string;
+
   constructor(
     private searchProvider: SearchProvider,
     private scraperProvider: ScraperProvider,
-  ) {}
+  ) {
+    this.name = `Firecrawl (${searchProvider.name} + ${scraperProvider.name})`;
+  }
 
   async findByDomain(domain: string): Promise<Result<Contact[]>> {
     const start = Date.now();

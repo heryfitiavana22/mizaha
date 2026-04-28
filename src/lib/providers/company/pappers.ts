@@ -57,6 +57,8 @@ async function fetchEntreprises({
 }
 
 export class PappersCompanyProvider implements CompanyProvider {
+  readonly name = "Pappers";
+
   async findByDomain(domain: string): Promise<Result<CompanyData | null>> {
     const start = Date.now();
     // Pappers has no domain-based lookup — derive company name from domain as best-effort
