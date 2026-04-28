@@ -120,29 +120,29 @@ For each adapter:
 
 ### Search
 
-- [ ] `src/lib/providers/search/brave.ts` — implements `SearchProvider`
+- [x] `src/lib/providers/search/brave.ts` — implements `SearchProvider`
   - Call Brave Search API
   - Return `Result<SearchResult[]>`
 
 ### Company (French data)
 
-- [ ] `src/lib/providers/company/pappers.ts` — implements `CompanyProvider`
-- [ ] `src/lib/providers/company/sirene.ts` — implements `CompanyProvider`
+- [x] `src/lib/providers/company/pappers.ts` — implements `CompanyProvider`
+- [x] `src/lib/providers/company/sirene.ts` — implements `CompanyProvider`
   - SIRENE is the official free French registry (INSEE)
 
 ### Scraper
 
-- [ ] `src/lib/providers/scraper/firecrawl.ts` — implements `ScraperProvider`
+- [x] `src/lib/providers/scraper/firecrawl.ts` — implements `ScraperProvider`
   - 500 credits/month free — log each use
 
 ### Email
 
-- [ ] `src/lib/providers/email/hunter.ts` — implements `EmailProvider`
+- [x] `src/lib/providers/email/hunter.ts` — implements `EmailProvider`
   - 25 req/month free — **very limited**, log every call
 
 ### LLM
 
-- [ ] `src/lib/providers/llm/claude.ts` — implements `LLMProvider`
+- [x] `src/lib/providers/llm/claude.ts` — implements `LLMProvider`
   - Use `@anthropic-ai/sdk`
   - All 3 methods: `extractCriteria`, `qualify`, `generateDraft`
 
