@@ -1,0 +1,28 @@
+import type {
+  CompanyData,
+  Contact,
+  QualificationResult,
+  Result,
+  SearchCriteria,
+} from "@/types";
+
+export type ExtractCriteriaInput = {
+  rawQuery: string;
+  useCase: string;
+};
+
+export type QualifyInput = {
+  company: CompanyData;
+  criteria: SearchCriteria;
+};
+
+export type GenerateDraftInput = {
+  contact: Contact;
+  companyContext: string;
+};
+
+export interface LLMProvider {
+  extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
+  qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
+  generateDraft(input: GenerateDraftInput): Promise<Result<string>>;
+}

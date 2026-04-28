@@ -13,22 +13,18 @@ The rest of the code doesn't know which provider is being used.
 ### `SearchProvider`
 
 Company discovery via web search.
+Types live in `src/lib/providers/interfaces/search.ts`.
 
 ```typescript
+// SearchOptions, SearchInput — in interfaces/search.ts
+// SearchResult — in src/types/index.ts (used across pipeline)
+
 interface SearchProvider {
-  search(query: string, options: SearchOptions): Promise<SearchResult[]>;
+  search(input: SearchInput): Promise<Result<SearchResult[]>>;
 }
 
-type SearchOptions = {
-  country?: string;
-  limit?: number;
-};
-
-type SearchResult = {
-  url: string;
-  title: string;
-  snippet: string;
-};
+type SearchOptions = { country?: string; limit?: number };
+type SearchInput = { query: string; options?: SearchOptions };
 ```
 
 ---
@@ -36,11 +32,14 @@ type SearchResult = {
 ### `CompanyProvider`
 
 Official company data (registries, legal databases).
+Types live in `src/lib/providers/interfaces/company.ts`.
 
 ```typescript
+// CompanyCriteria — in interfaces/company.ts
+
 interface CompanyProvider {
-  findByDomain(domain: string): Promise<CompanyData | null>;
-  search(criteria: CompanyCriteria): Promise<CompanyData[]>;
+  findByDomain(domain: string): Promise<Result<CompanyData | null>>;
+  search(criteria: CompanyCriteria): Promise<Result<CompanyData[]>>;
 }
 
 type CompanyCriteria = {
@@ -50,6 +49,7 @@ type CompanyCriteria = {
   maxEmployees?: number;
 };
 
+// CompanyData — in src/types/index.ts (used across pipeline)
 type CompanyData = {
   name: string;
   domain: string;
@@ -66,10 +66,13 @@ type CompanyData = {
 ### `ScraperProvider`
 
 Content extraction from a website.
+Types live in `src/lib/providers/interfaces/scraper.ts`.
 
 ```typescript
+// ScrapedContent — in interfaces/scraper.ts
+
 interface ScraperProvider {
-  scrape(url: string): Promise<ScrapedContent>;
+  scrape(url: string): Promise<Result<ScrapedContent>>;
 }
 
 type ScrapedContent = {
@@ -85,13 +88,19 @@ type ScrapedContent = {
 ### `EmailProvider`
 
 Contact and email search by domain.
+Types live in `src/lib/providers/interfaces/email.ts`.
 
 ```typescript
+// FindContactInput — in interfaces/email.ts
+
 interface EmailProvider {
-  findByDomain(domain: string): Promise<Contact[]>;
-  findContact(name: string, domain: string): Promise<Contact | null>;
+  findByDomain(domain: string): Promise<Result<Contact[]>>;
+  findContact(input: FindContactInput): Promise<Result<Contact | null>>;
 }
 
+type FindContactInput = { name: string; domain: string };
+
+// Contact — in src/types/index.ts (used across pipeline)
 type Contact = {
   name?: string;
   title?: string;
@@ -106,17 +115,21 @@ type Contact = {
 ### `LLMProvider`
 
 Language model calls.
+Types live in `src/lib/providers/interfaces/llm.ts`.
 
 ```typescript
+// ExtractCriteriaInput, QualifyInput, GenerateDraftInput — in interfaces/llm.ts
 interface LLMProvider {
-  extractCriteria(rawQuery: string, useCase: string): Promise<SearchCriteria>;
-  qualify(
-    company: CompanyData,
-    criteria: SearchCriteria,
-  ): Promise<QualificationResult>;
-  generateDraft(contact: Contact, companyContext: string): Promise<string>;
+  extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
+  qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
+  generateDraft(input: GenerateDraftInput): Promise<Result<string>>;
 }
 
+type ExtractCriteriaInput = { rawQuery: string; useCase: string };
+type QualifyInput = { company: CompanyData; criteria: SearchCriteria };
+type GenerateDraftInput = { contact: Contact; companyContext: string };
+
+// SearchCriteria, QualificationResult, CompanyData, Contact — in src/types/index.ts
 type SearchCriteria = {
   sector?: string;
   location?: string;
@@ -163,10 +176,10 @@ Both providers are **France only**. For international, other providers will be a
 
 ### Scraper (content extraction)
 
-| Provider   | File                    | Free tier          | Status                           |
-| ---------- | ----------------------- | ------------------ | -------------------------------- |
+| Provider   | File                    | Free tier            | Status                           |
+| ---------- | ----------------------- | -------------------- | -------------------------------- |
 | Firecrawl  | `scraper/firecrawl.ts`  | 500 credits one-time | Active MVP                       |
-| Playwright | `scraper/playwright.ts` | Free (self-hosted) | Backup if Firecrawl insufficient |
+| Playwright | `scraper/playwright.ts` | Free (self-hosted)   | Backup if Firecrawl insufficient |
 
 **Firecrawl** first — simple API, good extraction.
 **Playwright** as backup if volume exceeds the free tier or JS rendering is needed.
@@ -195,14 +208,14 @@ Both are very limited on the free tier. Monitor as a priority if volume increase
 
 ## Free Tier Summary for MVP
 
-| Provider     | Free limit        | Risk                |
-| ------------ | ----------------- | ------------------- |
-| Brave Search | 2,000 req/month   | Low                 |
-| SIRENE       | Unlimited         | None                |
-| Pappers      | 100 req/month     | Medium              |
+| Provider     | Free limit           | Risk                 |
+| ------------ | -------------------- | -------------------- |
+| Brave Search | 2,000 req/month      | Low                  |
+| SIRENE       | Unlimited            | None                 |
+| Pappers      | 100 req/month        | Medium               |
 | Firecrawl    | 500 credits one-time | High — one-time only |
-| Hunter.io    | 25 req/month      | High — very limited |
-| Apollo.io    | 50 credits/month  | High — very limited |
+| Hunter.io    | 25 req/month         | High — very limited  |
+| Apollo.io    | 50 credits/month     | High — very limited  |
 
 **Key bottleneck**: Hunter and Apollo are the free tier choke points.
 If volume increases, consider Playwright + direct site scraping for contacts.

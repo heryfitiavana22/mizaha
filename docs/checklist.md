@@ -99,11 +99,11 @@ Knowledge has an expiration date. Verify these tools before implementing against
 
 Create the 5 interface files. **These are contracts — do not add implementation details here.**
 
-- [ ] `src/lib/providers/interfaces/search.ts` — `SearchProvider`, `SearchOptions`, `SearchResult`
-- [ ] `src/lib/providers/interfaces/company.ts` — `CompanyProvider`, `CompanyCriteria`, `CompanyData`
-- [ ] `src/lib/providers/interfaces/scraper.ts` — `ScraperProvider`, `ScrapedContent`
-- [ ] `src/lib/providers/interfaces/email.ts` — `EmailProvider`, `Contact`
-- [ ] `src/lib/providers/interfaces/llm.ts` — `LLMProvider`, `SearchCriteria`, `QualificationResult`
+- [x] `src/lib/providers/interfaces/search.ts` — `SearchProvider`, `SearchOptions`, `SearchResult`
+- [x] `src/lib/providers/interfaces/company.ts` — `CompanyProvider`, `CompanyCriteria`, `CompanyData`
+- [x] `src/lib/providers/interfaces/scraper.ts` — `ScraperProvider`, `ScrapedContent`
+- [x] `src/lib/providers/interfaces/email.ts` — `EmailProvider`, `Contact`
+- [x] `src/lib/providers/interfaces/llm.ts` — `LLMProvider`, `SearchCriteria`, `QualificationResult`
 
 Reference: `docs/providers.md` — all interface definitions are there verbatim.
 

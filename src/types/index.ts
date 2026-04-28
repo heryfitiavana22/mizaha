@@ -6,13 +6,8 @@ export type Result<T> =
   | { success: false; error: Error };
 
 // ---------------------------------------------------------------------------
-// Search (SearchProvider)
+// Search
 // ---------------------------------------------------------------------------
-export type SearchOptions = {
-  country?: string;
-  limit?: number;
-};
-
 export type SearchResult = {
   url: string;
   title: string;
@@ -20,15 +15,8 @@ export type SearchResult = {
 };
 
 // ---------------------------------------------------------------------------
-// Company (CompanyProvider)
+// Company
 // ---------------------------------------------------------------------------
-export type CompanyCriteria = {
-  sector?: string;
-  location?: string;
-  minEmployees?: number;
-  maxEmployees?: number;
-};
-
 export type CompanyData = {
   name: string;
   domain: string;
@@ -40,17 +28,7 @@ export type CompanyData = {
 };
 
 // ---------------------------------------------------------------------------
-// Scraper (ScraperProvider)
-// ---------------------------------------------------------------------------
-export type ScrapedContent = {
-  url: string;
-  title: string;
-  content: string;
-  metadata: Record<string, string>;
-};
-
-// ---------------------------------------------------------------------------
-// Email (EmailProvider)
+// Email
 // ---------------------------------------------------------------------------
 export type Contact = {
   name?: string;
@@ -61,7 +39,7 @@ export type Contact = {
 };
 
 // ---------------------------------------------------------------------------
-// LLM (LLMProvider)
+// LLM
 // ---------------------------------------------------------------------------
 export type SearchCriteria = {
   sector?: string;
