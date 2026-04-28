@@ -1,6 +1,7 @@
 "use client";
 
 import { useJsonRenderMessage } from "@json-render/react";
+import type { StateStore } from "@json-render/core";
 import type { UIMessage } from "ai";
 import {
   Message,
@@ -11,9 +12,15 @@ import { JsonRenderWrapper } from "./json-render-wrapper";
 
 type ChatMessageProps = {
   message: UIMessage;
+  isStreaming?: boolean;
+  stateStore?: StateStore;
 };
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  isStreaming,
+  stateStore,
+}: ChatMessageProps) {
   const { spec, text, hasSpec } = useJsonRenderMessage(
     message.parts as Parameters<typeof useJsonRenderMessage>[0],
   );
@@ -22,7 +29,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
     <Message from={message.role}>
       <MessageContent>
         {text && <MessageResponse>{text}</MessageResponse>}
-        {hasSpec && spec && <JsonRenderWrapper spec={spec} />}
+        {hasSpec && spec && (
+          <JsonRenderWrapper
+            spec={spec}
+            loading={isStreaming}
+            store={stateStore}
+          />
+        )}
       </MessageContent>
     </Message>
   );

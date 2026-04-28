@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import { createStateStore } from "@json-render/core";
 import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessage } from "@/components/chat/chat-message";
@@ -20,6 +21,7 @@ export default function NewSearchPage() {
   const router = useRouter();
   const [rawQuery, setRawQuery] = useState("");
   const [isLaunching, setIsLaunching] = useState(false);
+  const stateStore = useMemo(() => createStateStore(), []);
 
   const { messages, sendMessage, status, stop } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
@@ -30,7 +32,26 @@ export default function NewSearchPage() {
 
   const handleSend = ({ text }: { text: string }) => {
     if (!rawQuery) setRawQuery(text);
-    sendMessage({ text });
+
+    const snapshot = stateStore.getSnapshot();
+    const criteriaLines = Object.entries(snapshot)
+      .filter(
+        ([, v]) =>
+          v !== null &&
+          v !== undefined &&
+          v !== "" &&
+          !(Array.isArray(v) && v.length === 0),
+      )
+      .map(
+        ([k, v]) => `[${k}]: ${Array.isArray(v) ? v.join(", ") : String(v)}`,
+      );
+
+    const fullText =
+      criteriaLines.length > 0
+        ? `${text}\n\n${criteriaLines.join("\n")}`
+        : text;
+
+    sendMessage({ text: fullText });
   };
 
   const handleLaunch = async () => {
@@ -40,7 +61,11 @@ export default function NewSearchPage() {
       const response = await fetch("/api/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawQuery, useCaseName: USE_CASE_NAME }),
+        body: JSON.stringify({
+          rawQuery,
+          useCaseName: USE_CASE_NAME,
+          uiCriteria: stateStore.getSnapshot(),
+        }),
       });
       if (!response.ok) throw new Error("Pipeline failed to start");
       const { searchId } = (await response.json()) as { searchId: string };
@@ -65,8 +90,13 @@ export default function NewSearchPage() {
       {hasMessages && (
         <Conversation className="h-100 rounded-md border">
           <ConversationContent>
-            {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
+            {messages.map((message, i) => (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                isStreaming={isStreaming && i === messages.length - 1}
+                stateStore={stateStore}
+              />
             ))}
           </ConversationContent>
           <ConversationScrollButton />

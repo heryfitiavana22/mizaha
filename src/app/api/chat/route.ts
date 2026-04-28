@@ -1,7 +1,13 @@
 import { chatCatalog } from "@/lib/ui-generative/catalog/chat";
 import { openai } from "@ai-sdk/openai";
-import { convertToModelMessages, streamText } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  streamText,
+} from "ai";
 import type { UIMessage } from "ai";
+import { pipeJsonRender } from "@json-render/core";
 import { z } from "zod";
 
 const CHAT_MODEL_ID = "gpt-4o-mini";
@@ -28,9 +34,18 @@ export async function POST(req: Request): Promise<Response> {
 
   const result = streamText({
     model: openai(CHAT_MODEL_ID),
-    system: chatCatalog.prompt({ customRules: CHAT_SYSTEM_RULES }),
+    system: chatCatalog.prompt({
+      mode: "inline",
+      customRules: CHAT_SYSTEM_RULES,
+    }),
     messages: await convertToModelMessages(messages),
   });
 
-  return result.toUIMessageStreamResponse();
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      writer.merge(pipeJsonRender(result.toUIMessageStream()));
+    },
+  });
+
+  return createUIMessageStreamResponse({ stream });
 }

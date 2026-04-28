@@ -8,6 +8,7 @@ import { z } from "zod";
 const pipelineBodySchema = z.object({
   rawQuery: z.string().min(1),
   useCaseName: z.string().min(1),
+  uiCriteria: z.record(z.string(), z.unknown()).optional(),
 });
 
 function toError(error: unknown): Error {
@@ -17,14 +18,16 @@ function toError(error: unknown): Error {
 async function createSearch({
   rawQuery,
   useCaseName,
+  uiCriteria,
 }: {
   rawQuery: string;
   useCaseName: string;
+  uiCriteria?: Record<string, unknown>;
 }): Promise<Result<string>> {
   try {
     const [search] = await db
       .insert(searchesTable)
-      .values({ rawQuery, useCase: useCaseName, criteria: {} })
+      .values({ rawQuery, useCase: useCaseName, criteria: uiCriteria ?? {} })
       .returning({ id: searchesTable.id });
     return { success: true, data: search.id };
   } catch (error) {
@@ -39,8 +42,12 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: parsed.error.issues }, { status: 400 });
   }
 
-  const { rawQuery, useCaseName } = parsed.data;
-  const searchResult = await createSearch({ rawQuery, useCaseName });
+  const { rawQuery, useCaseName, uiCriteria } = parsed.data;
+  const searchResult = await createSearch({
+    rawQuery,
+    useCaseName,
+    uiCriteria,
+  });
   if (!searchResult.success) {
     logger.error(
       { error: searchResult.error.message },
