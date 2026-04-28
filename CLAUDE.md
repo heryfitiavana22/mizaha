@@ -33,10 +33,18 @@ Key files:
 
 ## Commands
 
+**After every code change, always run both without exception:**
+
+```bash
+pnpm typecheck    # tsc --noEmit
+pnpm lint         # ESLint
+```
+
 ```bash
 pnpm dev          # start dev server
 pnpm build        # production build
 pnpm lint         # ESLint
+pnpm typecheck    # TypeScript type check
 
 # Database (once Phase 3 is set up)
 docker compose up -d                          # start PostgreSQL + pgvector

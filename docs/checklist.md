@@ -44,17 +44,17 @@ Knowledge has an expiration date. Verify these tools before implementing against
 
 ## Phase 1 — Project Bootstrap
 
-- [ ] Initialize project: `pnpm create next-app mizaha --typescript --app --tailwind --eslint --src-dir`
-- [ ] Verify `tsconfig.json` has `"strict": true`
-- [ ] Configure **Prettier** — create `.prettierrc`
-- [ ] Configure **ESLint** — adjust `.eslintrc.json` (strict TypeScript rules, no `any`)
-- [ ] Install and configure **Husky**: `pnpm add -D husky lint-staged && pnpm husky init`
-- [ ] Configure **lint-staged** in `package.json` — run ESLint + Prettier on staged files only
-- [ ] Install and configure **commitlint**: `pnpm add -D @commitlint/cli @commitlint/config-conventional`
-- [ ] Create `.commitlintrc.json` with `{ "extends": ["@commitlint/config-conventional"] }`
-- [ ] Add commitlint to Husky commit-msg hook
-- [ ] Install **pino + pino-pretty**: `pnpm add pino && pnpm add -D pino-pretty`
-- [ ] Create `src/lib/logger.ts` — singleton pino logger (JSON in prod, pino-pretty in dev)
+- [x] Initialize project: `pnpm create next-app mizaha --typescript --app --tailwind --eslint --src-dir`
+- [x] Verify `tsconfig.json` has `"strict": true`
+- [x] Configure **Prettier** — create `.prettierrc`
+- [x] Configure **ESLint** — strict TypeScript rules, no `any` (`@typescript-eslint/no-explicit-any: error`)
+- [x] Install and configure **Husky**: `pnpm add -D husky lint-staged && pnpm husky init`
+- [x] Configure **lint-staged** in `package.json` — run ESLint + Prettier on staged files only
+- [x] Install and configure **commitlint**: `pnpm add -D @commitlint/cli @commitlint/config-conventional`
+- [x] Create `.commitlintrc.json` with `{ "extends": ["@commitlint/config-conventional"] }`
+- [x] Add commitlint to Husky commit-msg hook
+- [x] Install **pino + pino-pretty**: `pnpm add pino && pnpm add -D pino-pretty`
+- [x] Create `src/lib/logger.ts` — singleton pino logger (JSON in prod, pino-pretty in dev)
 - [ ] First commit: `chore(setup): initialize next.js project with tooling`
 
 ---
