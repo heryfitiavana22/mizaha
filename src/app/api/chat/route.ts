@@ -17,6 +17,9 @@ const CHAT_SYSTEM_RULES = [
   "Generate interactive criteria components to help the user refine their company search.",
   "Include the most relevant fields based on what the user described.",
   "Always provide a brief explanation alongside the components.",
+  'CRITICAL: Every form component (Select, Checkbox, Slider, ToggleGroup) MUST bind its value/checked prop using { "$bindState": "/statePath" } — never use a plain string or hardcoded value. This is required for user selections to be captured.',
+  "CRITICAL: For every $bindState path used, initialize it in spec.state with a sensible default (e.g. empty string for Select, false for Checkbox).",
+  "CRITICAL: Never use Button components — they are not available. Use only: Stack, Heading, Text, Checkbox, Slider, Select, ToggleGroup, Separator.",
 ];
 
 const chatBodySchema = z.object({

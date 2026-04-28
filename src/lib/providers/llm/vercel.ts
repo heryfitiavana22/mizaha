@@ -30,6 +30,7 @@ export class VercelLLMProvider implements LLMProvider {
   async extractCriteria({
     rawQuery,
     useCase,
+    uiCriteria,
   }: ExtractCriteriaInput): Promise<Result<SearchCriteria>> {
     const start = Date.now();
 
@@ -38,7 +39,7 @@ export class VercelLLMProvider implements LLMProvider {
         model: this.model,
         output: Output.object({ schema: searchCriteriaSchema }),
         maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
-        prompt: buildExtractCriteriaPrompt({ rawQuery, useCase }),
+        prompt: buildExtractCriteriaPrompt({ rawQuery, useCase, uiCriteria }),
       });
 
       logger.info(

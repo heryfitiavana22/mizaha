@@ -39,14 +39,27 @@ export const searchCriteriaSchema = z.object({
 export function buildExtractCriteriaPrompt({
   rawQuery,
   useCase,
+  uiCriteria,
 }: ExtractCriteriaInput): string {
+  const uiCriteriaSection =
+    uiCriteria && Object.keys(uiCriteria).length > 0
+      ? `\n\nThe user also explicitly selected the following criteria via the UI — treat these as high-confidence signals:\n${Object.entries(
+          uiCriteria,
+        )
+          .map(
+            ([k, v]) =>
+              `- ${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`,
+          )
+          .join("\n")}`
+      : "";
+
   return `You are a B2B lead generation assistant specialized in French companies.
 
 Use case context: ${useCase}
 
 The user is a French professional looking for potential client companies. Extract structured search criteria from their natural language query.
 
-Query: "${rawQuery}"
+Query: "${rawQuery}"${uiCriteriaSection}
 
 Available signals — use these exact strings when the query implies them:
 - "recently_funded": company received funding recently

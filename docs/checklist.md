@@ -189,8 +189,9 @@ Each step = one pure function. No DB writes. No provider calls except through th
 Input and output types come from `src/types/index.ts`.
 
 - [x] `src/lib/pipeline/steps/extract-criteria.ts`
-  - Signature: `extractCriteria({ rawQuery, useCase, llm }: Options): Promise<Result<SearchCriteria>>`
-  - Calls the LLM prompt
+  - Signature: `extractCriteria({ rawQuery, useCase, llm, uiCriteria? }: Options): Promise<Result<SearchCriteria>>`
+  - `uiCriteria` = explicit UI selections from the chat (json-render StateStore snapshot)
+  - Passed as high-confidence context to the LLM prompt alongside `rawQuery`
 
 - [x] `src/lib/pipeline/steps/discover.ts`
   - Signature: `discover({ criteria, search, company }: Options): Promise<Result<CompanyData[]>>`
@@ -248,9 +249,9 @@ Input and output types come from `src/types/index.ts`.
 ## Phase 12 — API Routes
 
 - [x] `src/app/api/chat/route.ts` — streaming chat endpoint (Vercel AI SDK)
-  - Uses `LLMProvider.extractCriteria` to extract criteria from conversation
-  - Responds with json-render components (from `catalog/chat.ts`) for interactive refinement
-  - Stream the response
+  - Uses `chatCatalog.prompt({ mode: "inline" })` — model responds with text + JSONL patches
+  - Stream piped through `pipeJsonRender` → `createUIMessageStream` so patches arrive as `data-spec` parts
+  - Client uses `useChat` + `useJsonRenderMessage` to render the spec
 
 - [x] `src/app/api/pipeline/route.ts` — trigger pipeline
   - `POST`: creates a `searches` row (status: pending), triggers pipeline **in the background**, returns `search_id` immediately

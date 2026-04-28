@@ -125,7 +125,11 @@ interface LLMProvider {
   generateDraft(input: GenerateDraftInput): Promise<Result<string>>;
 }
 
-type ExtractCriteriaInput = { rawQuery: string; useCase: string };
+type ExtractCriteriaInput = {
+  rawQuery: string;
+  useCase: string;
+  uiCriteria?: Record<string, unknown>; // explicit selections from the chat UI (json-render state)
+};
 type QualifyInput = { company: CompanyData; criteria: SearchCriteria };
 type GenerateDraftInput = { contact: Contact; companyContext: string };
 

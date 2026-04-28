@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { createStateStore } from "@json-render/core";
+import { flattenSnapshot } from "@/lib/utils/flatten-snapshot";
 import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessage } from "@/components/chat/chat-message";
@@ -33,19 +34,7 @@ export default function NewSearchPage() {
   const handleSend = ({ text }: { text: string }) => {
     if (!rawQuery) setRawQuery(text);
 
-    const snapshot = stateStore.getSnapshot();
-    const criteriaLines = Object.entries(snapshot)
-      .filter(
-        ([, v]) =>
-          v !== null &&
-          v !== undefined &&
-          v !== "" &&
-          !(Array.isArray(v) && v.length === 0),
-      )
-      .map(
-        ([k, v]) => `[${k}]: ${Array.isArray(v) ? v.join(", ") : String(v)}`,
-      );
-
+    const criteriaLines = flattenSnapshot(stateStore.getSnapshot());
     const fullText =
       criteriaLines.length > 0
         ? `${text}\n\n${criteriaLines.join("\n")}`

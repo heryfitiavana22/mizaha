@@ -9,6 +9,7 @@ import type {
 export type ExtractCriteriaInput = {
   rawQuery: string;
   useCase: string;
+  uiCriteria?: Record<string, unknown>;
 };
 
 export type QualifyInput = {

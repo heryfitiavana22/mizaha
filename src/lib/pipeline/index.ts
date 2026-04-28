@@ -68,10 +68,13 @@ async function fetchSearch({
   searchId,
 }: {
   searchId: string;
-}): Promise<Result<{ rawQuery: string }>> {
+}): Promise<Result<{ rawQuery: string; uiCriteria: Record<string, unknown> }>> {
   try {
     const [search] = await db
-      .select({ rawQuery: searchesTable.rawQuery })
+      .select({
+        rawQuery: searchesTable.rawQuery,
+        uiCriteria: searchesTable.criteria,
+      })
       .from(searchesTable)
       .where(eq(searchesTable.id, searchId));
     if (!search)
@@ -79,7 +82,13 @@ async function fetchSearch({
         success: false,
         error: new Error(`Search ${searchId} not found`),
       };
-    return { success: true, data: search };
+    return {
+      success: true,
+      data: {
+        rawQuery: search.rawQuery,
+        uiCriteria: (search.uiCriteria ?? {}) as Record<string, unknown>,
+      },
+    };
   } catch (error) {
     return { success: false, error: toError(error) };
   }
@@ -314,16 +323,19 @@ async function runExtractCriteria({
   rawQuery,
   useCaseName,
   llm,
+  uiCriteria,
 }: {
   searchId: string;
   rawQuery: string;
   useCaseName: string;
   llm: UseCaseProviders["llm"];
+  uiCriteria?: Record<string, unknown>;
 }): Promise<Result<SearchCriteria>> {
   return trackStep({
     searchId,
     step: "extract-criteria",
-    run: () => extractCriteria({ rawQuery, useCase: useCaseName, llm }),
+    run: () =>
+      extractCriteria({ rawQuery, useCase: useCaseName, llm, uiCriteria }),
   });
 }
 
@@ -488,11 +500,13 @@ async function executePipeline({
   useCaseName,
   rawQuery,
   providers,
+  uiCriteria,
 }: {
   searchId: string;
   useCaseName: string;
   rawQuery: string;
   providers: UseCaseProviders;
+  uiCriteria?: Record<string, unknown>;
 }): Promise<void> {
   // Step 1 — blocking: no criteria = no pipeline
   const criteriaResult = await runExtractCriteria({
@@ -500,6 +514,7 @@ async function executePipeline({
     rawQuery,
     useCaseName,
     llm: providers.llm,
+    uiCriteria,
   });
   if (!criteriaResult.success) {
     logger.error(
@@ -572,6 +587,7 @@ export async function runPipeline({
       useCaseName,
       rawQuery: searchResult.data.rawQuery,
       providers: config.providers,
+      uiCriteria: searchResult.data.uiCriteria,
     });
   } catch (caughtError) {
     const pipelineError = toError(caughtError);

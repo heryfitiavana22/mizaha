@@ -6,9 +6,11 @@
 User types in natural language
   ↓
 [Step 1 — Interactive Chat]
-  json-render generates interactive components (checkboxes, sliders, etc.)
-  User refines criteria visually
-  Claude extracts structured criteria (JSON)
+  Model responds in inline mode: text + JSONL patches (via pipeJsonRender)
+  json-render renders interactive components (Select, Checkbox, Slider…)
+  All renderers share a single StateStore — selections accumulate across messages
+  Each new user message appends current selections as "key: value" lines
+  User clicks "Lancer la recherche" → uiCriteria snapshot sent to pipeline
   ↓
 [Step 2 — discover]
   Brave Search → list of company URLs
@@ -123,12 +125,14 @@ Each step is independent and can be tested, replaced, or reordered without touch
 ```text
 src/lib/pipeline/
 ├── steps/
-│   ├── extract-criteria.ts   → receives raw_query, returns SearchCriteria (JSON)
+│   ├── extract-criteria.ts   → receives rawQuery + optional uiCriteria, returns SearchCriteria (JSON)
 │   ├── discover.ts           → receives SearchCriteria, returns CompanyData[]
 │   ├── qualify.ts            → receives CompanyData[], returns QualifiedCompany[]
 │   └── enrich.ts             → receives QualifiedCompany[], returns EnrichedCompany[]
 └── index.ts                  → orchestrator — step order + pipeline_runs
 ```
+
+`uiCriteria` (explicit selections from the chat UI) is passed as additional context to `extractCriteria`. The LLM uses it alongside `rawQuery` to produce a more accurate `SearchCriteria`. If `uiCriteria` is empty, the prompt falls back to `rawQuery` only.
 
 `index.ts` is the only place that knows the step order and traces execution.
 
@@ -178,8 +182,8 @@ A pipeline that returns 8 results out of 10 is better than a pipeline that crash
 ## API Data Flow
 
 ```text
-POST /api/pipeline
-  → creates a search in database (status: pending)
+POST /api/pipeline { rawQuery, useCaseName, uiCriteria? }
+  → creates a search in database (status: pending, criteria: uiCriteria)
   → triggers the pipeline in the background
   → returns search_id immediately
 
