@@ -305,22 +305,22 @@ Reference: `docs/conventions.md` §9
 
 ### Unit tests (pure functions first — no mocks needed)
 
-- [ ] `src/lib/pipeline/steps/__tests__/extract-criteria.test.ts`
-- [ ] `src/lib/pipeline/steps/__tests__/discover.test.ts`
-- [ ] `src/lib/pipeline/steps/__tests__/qualify.test.ts`
-- [ ] `src/lib/pipeline/steps/__tests__/enrich.test.ts`
-- [ ] `src/lib/utils/__tests__/` — test each utility function
+- [x] `src/lib/pipeline/steps/__tests__/extract-criteria.test.ts`
+- [x] `src/lib/pipeline/steps/__tests__/discover.test.ts`
+- [x] `src/lib/pipeline/steps/__tests__/qualify.test.ts`
+- [x] `src/lib/pipeline/steps/__tests__/enrich.test.ts`
+- [x] `src/lib/utils/__tests__/` — test each utility function
 
 ### Unit tests with HTTP mocks (provider adapters)
 
-- [ ] `src/lib/providers/search/__tests__/brave.test.ts` — mock Brave API response
-- [ ] `src/lib/providers/company/__tests__/pappers.test.ts`
-- [ ] `src/lib/providers/scraper/__tests__/firecrawl.test.ts`
-- [ ] `src/lib/providers/email/__tests__/hunter.test.ts`
+- [x] `src/lib/providers/search/__tests__/brave.test.ts` — mock Brave API response
+- [x] `src/lib/providers/company/__tests__/pappers.test.ts`
+- [x] `src/lib/providers/scraper/__tests__/firecrawl.test.ts`
+- [x] `src/lib/providers/email/__tests__/hunter.test.ts`
 
 ### Integration tests (real local DB, mocked providers)
 
-- [ ] `src/lib/pipeline/__tests__/pipeline.int.test.ts`
+- [x] `src/lib/pipeline/__tests__/pipeline.int.test.ts`
   - Uses the real local DB (Docker)
   - Mocks all external providers
   - Runs the full pipeline from `raw_query` → results in DB
@@ -330,10 +330,10 @@ Reference: `docs/conventions.md` §9
 
 ### Test utilities
 
-- [ ] `src/tests/fixtures/company.ts` — fake company data
-- [ ] `src/tests/fixtures/search.ts` — fake search + criteria
-- [ ] `src/tests/mocks/providers.ts` — mock implementations of the 5 interfaces
-- [ ] `src/tests/helpers/db.ts` — test DB helpers (reset between tests)
+- [x] `src/tests/fixtures/company.ts` — fake company data
+- [x] `src/tests/fixtures/search.ts` — fake search + criteria
+- [x] `src/tests/mocks/providers.ts` — mock implementations of the 5 interfaces
+- [x] `src/tests/helpers/db.ts` — test DB helpers (reset between tests)
 
 ---
 

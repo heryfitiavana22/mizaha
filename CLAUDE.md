@@ -53,10 +53,12 @@ pnpm db:generate  # generate migration from schema changes
 pnpm db:migrate   # apply pending migrations
 pnpm db:studio    # open Drizzle Studio (DB browser)
 
-# Tests (once Phase 14 is set up — Vitest)
-pnpm test                                     # run all unit tests
-pnpm test src/lib/pipeline/steps/discover     # run a single test file
-pnpm test --reporter=verbose                  # verbose output
+# Tests (Vitest)
+pnpm test                                     # unit tests only (excludes *.int.test.ts)
+pnpm test:int                                 # integration tests (requires Docker DB running)
+pnpm test:all                                 # all tests
+pnpm test src/lib/pipeline/steps/discover     # run a single test file by path
+pnpm test -- --reporter=verbose               # verbose output
 ```
 
 Commit format (commitlint enforces this): `<type>(<scope>): <description>`
