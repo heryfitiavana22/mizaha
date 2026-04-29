@@ -7,6 +7,8 @@ actuellement je teste l'app, il y a cette resultat qu'on a eu : http://localhost
 
 ce que je veux que tu fasse c'est qu'on va ameliorer profodement et totalement la pipeline pour avoir une meilleure resultat : @src/app/api/pipeline/route.ts
 
+Tu as carte blanche.
+
 ## checklist des regles
 
 - [ ] tu devra savoir en details, meme le plus petit details du pipeline entier
@@ -19,11 +21,25 @@ ce que je veux que tu fasse c'est qu'on va ameliorer profodement et totalement l
 - [ ] ce qui est fait acteul ne veut pas dire correct
 - [ ] il ne faut pas faire juste ameliorer ou adapter ce qui existe, on a toutes les droits de modifier totalement et tout
 
+## une chose que tu va faire a part tes propres analyse
+
+Regarde pour chaque step, analyse ces input et output
+
+- est-ce que ca fait de sens ?
+- est-ce que c'est utile ?
+- commment les ameliorers ?
+
+tu peux effacer, enlever, changer.
+il ne sont pas correct par defaut, donc tout peut changer totalement
+
 ## notes
 
 - il ya la docs qui a tout dit mais on peut tout changer la code du pipeline pour avoir une meilleure resultat, ok ?
 - cela implique qu'on a tout le droit de tout changer
+- Rien de ce qui existe n'est considéré correct par défaut.
 - l'exemple dans le requete est juste un exemple, tout peut se faire, donc ne contente pas de l'exemple mais pense a l'avenir. Exemple @docs/use-cases.md
+- la @docs/ n'est pas une reference vrai ici, on l'ameliore pour avoir une meilleure resultat
+- ceci n'est pas un correction, mais une refonte totale et profond
 
 ## notre but final
 
@@ -32,3 +48,6 @@ ce que je veux que tu fasse c'est qu'on va ameliorer profodement et totalement l
 ## ce que tu devra faire
 
 - a la fin tu devra evoquer ce qu'on devra ameliorer du pipeline entier, toutes les changemennt totalement et profodemment
+- avant de me donner ce qu'on devra changer, verifie d'abord que tu as bien respecter le "checklist des regles". ne me reponds pas tant que tu n'a pas respecter le "checklist des regles"
+
+**imporant**: verifie d'abord que tu as bien respecter le "checklist des regles". ne me reponds pas tant que tu n'a pas respecter le "checklist des regles"
