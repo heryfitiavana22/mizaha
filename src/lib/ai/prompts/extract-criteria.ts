@@ -60,6 +60,7 @@ export const searchCriteriaSchema = z.object({
         "(3) direct career page signal — '\"rejoindre notre équipe\" TypeScript Node.js startup France', " +
         "(4) press or sector coverage — 'startup SaaS France croissance équipe technique 2024'. " +
         "Write natural-language queries. Use at most one quoted phrase per query — stacking multiple quoted terms returns zero results. " +
+        "You may use site:.fr to target French company pages specifically — but NEVER use site: with a plain word (site:company, site:careers are invalid and waste the query). " +
         "Avoid job-board vocabulary ('offre emploi', 'freelance mission', 'CDI développeur') — those surface job platforms, not company pages.",
     ),
 
