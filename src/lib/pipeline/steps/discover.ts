@@ -105,7 +105,7 @@ async function resolveCompanyDomain({
 }): Promise<string | null> {
   const result = await search.search({
     query: `"${name}" ${DOMAIN_RESOLUTION_EXCLUSIONS}`,
-    options: { limit: 5 },
+    options: { limit: 10 },
   });
   if (!result.success || result.data.length === 0) return null;
 
