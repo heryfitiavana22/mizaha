@@ -32,24 +32,34 @@ async function resolveCompanies({
   company: CompanyProvider;
 }): Promise<CompanyData[]> {
   const seen = new Set<string>();
-  const resolved: CompanyData[] = [];
+  const toResolve: Array<{ result: SearchResult; domain: string }> = [];
 
   for (const result of results) {
     const domain = extractDomain({ url: result.url });
-    if (!domain || seen.has(domain)) continue;
+    // Skip missing, already-seen, or pure-digit strings (SIREN codes, not domains)
+    if (!domain || /^\d+$/.test(domain) || seen.has(domain)) continue;
     seen.add(domain);
-
-    const companyResult = await company.findByDomain(domain);
-    if (companyResult.success && companyResult.data) {
-      resolved.push(companyResult.data);
-    } else {
-      // Company provider found nothing — keep the domain with minimal data
-      // so qualify can scrape the site and fill in the context
-      resolved.push({ name: result.title, domain, sector: "", location: "" });
-    }
+    toResolve.push({ result, domain });
   }
 
-  return resolved;
+  const settlements = await Promise.allSettled(
+    toResolve.map(async ({ result, domain }) => {
+      const companyResult = await company.findByDomain(domain);
+      if (companyResult.success && companyResult.data)
+        return companyResult.data;
+      // Company provider found nothing — keep minimal data so qualify can scrape
+      return {
+        name: result.title,
+        domain,
+        sector: "",
+        location: "",
+      } as CompanyData;
+    }),
+  );
+
+  return settlements
+    .filter((s) => s.status === "fulfilled")
+    .map((s) => s.value);
 }
 
 export async function discover({

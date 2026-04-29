@@ -54,12 +54,15 @@ export async function qualify({
   scraper,
   llm,
 }: QualifyOptions): Promise<Result<QualifiedCompany[]>> {
-  const qualified: QualifiedCompany[] = [];
+  const settlements = await Promise.allSettled(
+    companies.map((company) => qualifyOne({ company, criteria, scraper, llm })),
+  );
 
-  for (const company of companies) {
-    const result = await qualifyOne({ company, criteria, scraper, llm });
-    if (result?.success) qualified.push(result.data);
-  }
+  const qualified = settlements
+    .filter((s) => s.status === "fulfilled")
+    .map((s) => s.value)
+    .filter((r) => r !== null && r.success)
+    .map((r) => r.data);
 
   return { success: true, data: qualified };
 }

@@ -7,7 +7,7 @@ import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
 import { BraveSearchProvider } from "@/lib/providers/search/brave";
 import type { UseCaseConfig } from "./index";
 
-const OPENAI_MODEL_ID = "gpt-4o-mini";
+const OPENAI_MODEL_ID = "gpt-5.4-mini";
 
 export const freelanceConfig: UseCaseConfig = {
   name: "freelance",

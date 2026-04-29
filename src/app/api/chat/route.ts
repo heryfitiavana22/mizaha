@@ -10,7 +10,7 @@ import type { UIMessage } from "ai";
 import { pipeJsonRender } from "@json-render/core";
 import { z } from "zod";
 
-const CHAT_MODEL_ID = "gpt-4o-mini";
+const CHAT_MODEL_ID = "gpt-5.4-mini";
 
 const CHAT_SYSTEM_RULES = [
   "Respond in the same language as the user (French if they write in French).",

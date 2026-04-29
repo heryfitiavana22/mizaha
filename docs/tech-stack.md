@@ -39,9 +39,9 @@ The AI adapts the results layout based on the search context. Search by region â
 
 ## Artificial Intelligence
 
-| Tool                 | Role     | Reason                                             |
-| -------------------- | -------- | -------------------------------------------------- |
-| OpenAI (gpt-4o-mini) | Main LLM | Structured Outputs support, cost-effective for MVP |
+| Tool                  | Role     |
+| --------------------- | -------- |
+| OpenAI (gpt-5.4-mini) | Main LLM |
 
 The LLM is used for:
 

@@ -132,7 +132,13 @@ src/lib/pipeline/
 └── index.ts                  → orchestrator — step order + pipeline_runs
 ```
 
-`uiCriteria` (explicit selections from the chat UI) is passed as additional context to `extractCriteria`. The LLM uses it alongside `rawQuery` to produce a more accurate `SearchCriteria`. If `uiCriteria` is empty, the prompt falls back to `rawQuery` only.
+`uiCriteria` (explicit selections from the chat UI) is normalized by `extract-criteria.ts` before reaching the LLM: common key aliases (`industry`→`sector`, `tech_stack`→`techStack`, `min_employees`+`max_employees`→`employeeRange`, etc.) are mapped to canonical `SearchCriteria` field names. The LLM then uses the cleaned criteria alongside `rawQuery` to produce a more accurate `SearchCriteria`. If `uiCriteria` is empty, the prompt falls back to `rawQuery` only.
+
+`discover.ts` filters out SIREN codes (pure digit strings) that appear as domains and resolves all company lookups in parallel (`Promise.allSettled`).
+
+`qualify.ts` and `enrich.ts` also run per-company work in parallel (`Promise.allSettled`) — a single company failure does not block others.
+
+`enrich.ts` applies a score threshold of **0.35**: companies below it are skipped entirely (no email lookup).
 
 `index.ts` is the only place that knows the step order and traces execution.
 

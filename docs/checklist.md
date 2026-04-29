@@ -191,21 +191,24 @@ Input and output types come from `src/types/index.ts`.
 - [x] `src/lib/pipeline/steps/extract-criteria.ts`
   - Signature: `extractCriteria({ rawQuery, useCase, llm, uiCriteria? }: Options): Promise<Result<SearchCriteria>>`
   - `uiCriteria` = explicit UI selections from the chat (json-render StateStore snapshot)
-  - Passed as high-confidence context to the LLM prompt alongside `rawQuery`
+  - Keys are normalized to canonical `SearchCriteria` field names before passing to LLM (`industry`→`sector`, `tech_stack`→`techStack`, etc.)
 
 - [x] `src/lib/pipeline/steps/discover.ts`
   - Signature: `discover({ criteria, search, company }: Options): Promise<Result<CompanyData[]>>`
   - Calls search provider + company provider
+  - Filters SIREN codes (pure digit strings) — not valid web domains
+  - Company lookups run in parallel (`Promise.allSettled`) — one failure does not block others
   - Returns merged, deduplicated list
 
 - [x] `src/lib/pipeline/steps/qualify.ts`
   - Signature: `qualify({ companies, criteria, scraper, llm }: Options): Promise<Result<QualifiedCompany[]>>`
-  - Calls scraper then LLM for each company
+  - Calls scraper then LLM for each company in parallel (`Promise.allSettled`)
   - **Error level 3**: if one company fails scraping, skip it and continue
 
 - [x] `src/lib/pipeline/steps/enrich.ts`
   - Signature: `enrich({ companies, email }: Options): Promise<Result<EnrichedCompany[]>>`
-  - Calls email provider for each company
+  - Only enriches companies with `qualification.score >= 0.35` — others skipped entirely
+  - Email lookups run in parallel (`Promise.allSettled`)
 
 ---
 
