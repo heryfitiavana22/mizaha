@@ -52,15 +52,15 @@ export const searchCriteriaSchema = z.object({
     .array(z.string())
     .describe(
       "3 to 5 search queries ready to be sent to Brave Search. " +
-        "Goal: surface pages of real individual companies (careers pages, about pages, blog posts, funding news) — not aggregated listings. " +
-        "Write natural-language queries — NOT boolean AND chains. " +
-        'Use at most one quoted phrase per query. Stacking multiple quoted terms (\'"A" "B" "C"\') returns zero results in practice. ' +
-        "Vary the angles: company hiring pages, funding announcements, sector blogs, press coverage. " +
-        "Avoid site: operators pointing to aggregated platforms (linkedin.com, indeed.com, welcometothejungle.com). " +
-        "Good examples: 'startup SaaS Paris recrutement développeur TypeScript 2024', " +
-        "'levée de fonds startup fintech France recrutement ingénieur', " +
-        "'\"nous recrutons\" agence e-commerce France prestataire'. " +
-        'Bad examples (too restrictive, return zero results): \'"nous recrutons" "TypeScript" "freelance" "Node.js"\'.',
+        "Goal: surface pages of real individual companies — their own website, engineering blog, press coverage, funding news. NOT job boards or aggregated listings. " +
+        "Target company-side signals that reveal the underlying need — not job-board vocabulary. " +
+        "Vary the angles across these types: " +
+        "(1) company blog or sector content — 'engineering blog startup TypeScript Node.js France', " +
+        "(2) funding or growth news — 'levée de fonds startup France 2024 recrutement ingénieur', " +
+        "(3) direct career page signal — '\"rejoindre notre équipe\" TypeScript Node.js startup France', " +
+        "(4) press or sector coverage — 'startup SaaS France croissance équipe technique 2024'. " +
+        "Write natural-language queries. Use at most one quoted phrase per query — stacking multiple quoted terms returns zero results. " +
+        "Avoid job-board vocabulary ('offre emploi', 'freelance mission', 'CDI développeur') — those surface job platforms, not company pages.",
     ),
 
   qualificationCriteria: z
@@ -126,7 +126,7 @@ Extract structured search criteria from the user's natural language query.
 Query: "${rawQuery}"${uiCriteriaSection}
 
 Instructions:
-- For searchStrategies: write broad, natural-language queries that Brave can execute. Do NOT stack multiple quoted phrases in one query — it drags results to zero. One quoted phrase per query maximum. Target company pages (careers, about, blog) or news coverage (funding, launches, hiring).
+- For searchStrategies: target company-side signals (tech blog, funding news, direct career page, press coverage) — not job-board vocabulary. Job-board terms ("offre d'emploi", "mission freelance", "recrutement CDI") surface job platforms, not company pages. Write natural-language queries, one quoted phrase per query maximum.
 - For qualificationCriteria: write in French what must be found on the company website to confirm relevance. Each criterion must be verifiable from website content.
 - Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
 }
