@@ -96,10 +96,15 @@ async function resolveCompanyDomain({
 }): Promise<string | null> {
   const result = await search.search({
     query: `"${name}" ${DOMAIN_RESOLUTION_EXCLUSIONS}`,
-    options: { limit: 3 },
+    options: { limit: 5 },
   });
   if (!result.success || result.data.length === 0) return null;
-  return extractDomain({ url: result.data[0].url });
+
+  for (const item of result.data) {
+    const domain = extractDomain({ url: item.url });
+    if (domain && !isPlatformDomain(domain)) return domain;
+  }
+  return null;
 }
 
 function collectUniqueDomains({
