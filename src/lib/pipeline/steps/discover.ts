@@ -43,6 +43,15 @@ const PLATFORM_DOMAINS = new Set([
   "pole-emploi.fr",
   "glassdoor.com",
   "hellowork.com",
+  // Reference & encyclopedias
+  "wikipedia.org",
+  "wikidata.org",
+  "crunchbase.com",
+  // Company registries (data sources, not prospects)
+  "societe.com",
+  "verif.com",
+  "infogreffe.fr",
+  "annuaire-entreprises.data.gouv.fr",
 ]);
 
 function isPlatformDomain(domain: string): boolean {
