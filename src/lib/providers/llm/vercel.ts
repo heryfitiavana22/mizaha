@@ -6,6 +6,10 @@ import {
   searchCriteriaSchema,
 } from "@/lib/ai/prompts/extract-criteria";
 import {
+  buildDiscoverExtractPrompt,
+  extractedCompaniesSchema,
+} from "@/lib/ai/prompts/discover-extract";
+import {
   buildQualifyPrompt,
   qualificationResultSchema,
 } from "@/lib/ai/prompts/qualify";
@@ -16,7 +20,12 @@ import type {
   LLMProvider,
   QualifyInput,
 } from "@/lib/providers/interfaces/llm";
-import type { QualificationResult, Result, SearchCriteria } from "@/types";
+import type {
+  QualificationResult,
+  Result,
+  SearchCriteria,
+  SearchResult,
+} from "@/types";
 
 const MAX_OUTPUT_TOKENS_STRUCTURED = 512;
 const MAX_OUTPUT_TOKENS_DRAFT = 1024;
@@ -63,6 +72,45 @@ export class VercelLLMProvider implements LLMProvider {
         {
           provider: this.modelName,
           method: "extractCriteria",
+          durationMs: Date.now() - start,
+          status: "error",
+          error: err.message,
+        },
+        "API call failed",
+      );
+      return { success: false, error: err };
+    }
+  }
+
+  async extractCompanies(results: SearchResult[]): Promise<Result<string[]>> {
+    const start = Date.now();
+
+    try {
+      const { output } = await generateText({
+        model: this.model,
+        output: Output.object({ schema: extractedCompaniesSchema }),
+        maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
+        prompt: buildDiscoverExtractPrompt({ results }),
+      });
+
+      logger.info(
+        {
+          provider: this.modelName,
+          method: "extractCompanies",
+          durationMs: Date.now() - start,
+          status: "success",
+          count: output.companies.length,
+        },
+        "API call completed",
+      );
+
+      return { success: true, data: output.companies };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error(
+        {
+          provider: this.modelName,
+          method: "extractCompanies",
           durationMs: Date.now() - start,
           status: "error",
           error: err.message,

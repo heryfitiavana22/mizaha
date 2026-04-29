@@ -4,6 +4,7 @@ import type {
   QualificationResult,
   Result,
   SearchCriteria,
+  SearchResult,
 } from "@/types";
 
 export type ExtractCriteriaInput = {
@@ -26,6 +27,7 @@ export type GenerateDraftInput = {
 export interface LLMProvider {
   readonly name: string;
   extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
+  extractCompanies(results: SearchResult[]): Promise<Result<string[]>>;
   qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
   generateDraft(input: GenerateDraftInput): Promise<Result<string>>;
 }

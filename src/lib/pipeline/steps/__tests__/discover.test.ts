@@ -4,15 +4,18 @@ import { fakeCompany } from "@/tests/fixtures/company";
 import { fakeCriteria } from "@/tests/fixtures/search";
 import {
   makeMockCompanyProvider,
+  makeMockLLMProvider,
   makeMockSearchProvider,
 } from "@/tests/mocks/providers";
 
 describe("discover", () => {
-  it("returns found companies", async () => {
-    const search = makeMockSearchProvider();
-    const company = makeMockCompanyProvider();
-
-    const result = await discover({ criteria: fakeCriteria, search, company });
+  it("returns companies extracted by LLM from search results", async () => {
+    const result = await discover({
+      criteria: fakeCriteria,
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+    });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
@@ -20,39 +23,59 @@ describe("discover", () => {
     expect(result.data[0].domain).toBe(fakeCompany.domain);
   });
 
-  it("returns failure when search provider fails", async () => {
+  it("returns failure when all search strategies fail", async () => {
     const error = new Error("Search API down");
     const search = makeMockSearchProvider({
       search: vi.fn().mockResolvedValue({ success: false, error }),
     });
-    const company = makeMockCompanyProvider();
 
-    const result = await discover({ criteria: fakeCriteria, search, company });
+    const result = await discover({
+      criteria: fakeCriteria,
+      search,
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+    });
 
-    expect(result).toEqual({ success: false, error });
+    expect(result.success).toBe(false);
   });
 
-  it("deduplicates companies with the same domain", async () => {
-    const search = makeMockSearchProvider({
-      search: vi.fn().mockResolvedValue({
-        success: true,
-        data: [
-          { url: "https://acme.fr/page1", title: "Acme", snippet: "" },
-          { url: "https://www.acme.fr/page2", title: "Acme", snippet: "" },
-        ],
-      }),
+  it("returns empty when LLM extracts no companies", async () => {
+    const llm = makeMockLLMProvider({
+      extractCompanies: vi.fn().mockResolvedValue({ success: true, data: [] }),
     });
-    const company = makeMockCompanyProvider();
 
-    const result = await discover({ criteria: fakeCriteria, search, company });
+    const result = await discover({
+      criteria: fakeCriteria,
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm,
+    });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    // Both URLs resolve to acme.fr — only one company in output
+    expect(result.data).toHaveLength(0);
+  });
+
+  it("deduplicates companies that resolve to the same domain", async () => {
+    const llm = makeMockLLMProvider({
+      extractCompanies: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: ["Acme SAS", "Acme"] }),
+    });
+    // Both names resolve to the same domain via the same mock search
+    const result = await discover({
+      criteria: fakeCriteria,
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
     expect(result.data).toHaveLength(1);
   });
 
-  it("builds minimal company from search result when provider returns null", async () => {
+  it("builds minimal company from domain when registry returns null", async () => {
     const company = makeMockCompanyProvider({
       findByDomain: vi.fn().mockResolvedValue({ success: true, data: null }),
     });
@@ -61,25 +84,28 @@ describe("discover", () => {
       criteria: fakeCriteria,
       search: makeMockSearchProvider(),
       company,
+      llm: makeMockLLMProvider(),
     });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    // When provider returns null, discover still includes the domain with minimal data
-    // so qualify can scrape the site and fill in the context
     expect(result.data).toHaveLength(1);
     expect(result.data[0].domain).toBe("acme.fr");
-    expect(result.data[0].name).toBe("Acme SAS");
   });
 
-  it("builds query from criteria fields", async () => {
+  it("uses searchStrategies from criteria as search queries", async () => {
     const search = makeMockSearchProvider();
-    const company = makeMockCompanyProvider();
 
-    await discover({ criteria: fakeCriteria, search, company });
+    await discover({
+      criteria: fakeCriteria,
+      search,
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+    });
 
-    const calledWith = vi.mocked(search.search).mock.calls[0][0];
-    expect(calledWith.query).toContain("SaaS");
-    expect(calledWith.query).toContain("Paris");
+    const queries = vi.mocked(search.search).mock.calls.map((c) => c[0].query);
+    for (const strategy of fakeCriteria.searchStrategies) {
+      expect(queries).toContain(strategy);
+    }
   });
 });

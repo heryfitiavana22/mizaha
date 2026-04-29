@@ -1,5 +1,7 @@
 import type { CompanyProvider } from "@/lib/providers/interfaces/company";
+import type { LLMProvider } from "@/lib/providers/interfaces/llm";
 import type { SearchProvider } from "@/lib/providers/interfaces/search";
+import logger from "@/lib/logger";
 import { extractDomain } from "@/lib/utils/url";
 import type {
   CompanyData,
@@ -10,44 +12,18 @@ import type {
 
 const SEARCH_LIMIT_PER_QUERY = 10;
 
-// Domains that are directories, registries, job boards or news sites — not actual companies
-const NOISE_DOMAINS = new Set([
-  "insee.fr",
-  "annuaire-entreprises.data.gouv.fr",
-  "data.gouv.fr",
-  "entreprises.gouv.fr",
-  "infogreffe.fr",
-  "bodacc.fr",
-  "journal-officiel.gouv.fr",
-  "societe.com",
-  "verif.com",
-  "manageo.fr",
-  "pappers.fr",
-  "sirene.fr",
-  "linkedin.com",
-  "welcometothejungle.com",
-  "indeed.fr",
-  "indeed.com",
-  "monster.fr",
-  "apec.fr",
-  "pole-emploi.fr",
-  "francetravail.fr",
-  "hellowork.com",
-  "choosemycompany.com",
-  "glassdoor.fr",
-  "wikipedia.org",
-  "lefigaro.fr",
-  "lemonde.fr",
-  "bfmtv.com",
-  "latribune.fr",
-  "lesechos.fr",
-  "capital.fr",
-]);
+// Fetch more candidates than needed — some names may fail to resolve or map to the same domain
+const DOMAIN_RESOLUTION_BUFFER = 2;
+
+// Excluded from domain resolution queries — they return job board pages, not the company's own site
+const DOMAIN_RESOLUTION_EXCLUSIONS =
+  "-site:linkedin.com -site:indeed.com -site:indeed.fr -site:welcometothejungle.com -site:jobteaser.com";
 
 type DiscoverOptions = {
   criteria: SearchCriteria;
   search: SearchProvider;
   company: CompanyProvider;
+  llm: LLMProvider;
 };
 
 async function runSearchStrategies({
@@ -56,7 +32,7 @@ async function runSearchStrategies({
 }: {
   strategies: string[];
   search: SearchProvider;
-}): Promise<SearchResult[]> {
+}): Promise<{ results: SearchResult[]; allFailed: boolean }> {
   const settlements = await Promise.allSettled(
     strategies.map((query) =>
       search.search({ query, options: { limit: SEARCH_LIMIT_PER_QUERY } }),
@@ -64,42 +40,58 @@ async function runSearchStrategies({
   );
 
   const results: SearchResult[] = [];
+  let successCount = 0;
   for (const settlement of settlements) {
     if (settlement.status === "fulfilled" && settlement.value.success) {
+      successCount++;
       results.push(...settlement.value.data);
     }
   }
-  return results;
+
+  return {
+    results,
+    allFailed: successCount === 0 && strategies.length > 0,
+  };
 }
 
-function deduplicateByDomain({
-  results,
+async function resolveCompanyDomain({
+  name,
+  search,
 }: {
-  results: SearchResult[];
-}): Array<{ result: SearchResult; domain: string }> {
+  name: string;
+  search: SearchProvider;
+}): Promise<string | null> {
+  const result = await search.search({
+    query: `"${name}" ${DOMAIN_RESOLUTION_EXCLUSIONS}`,
+    options: { limit: 3 },
+  });
+  if (!result.success || result.data.length === 0) return null;
+  return extractDomain({ url: result.data[0].url });
+}
+
+function collectUniqueDomains({
+  settlements,
+}: {
+  settlements: PromiseSettledResult<string | null>[];
+}): string[] {
   const seen = new Set<string>();
-  const unique: Array<{ result: SearchResult; domain: string }> = [];
-
-  for (const result of results) {
-    const domain = extractDomain({ url: result.url });
-    if (!domain) continue;
-    // SIRENE and Pappers return SIREN numbers as domain — reject pure-digit strings
-    if (/^\d+$/.test(domain)) continue;
-    if (NOISE_DOMAINS.has(domain)) continue;
-    if (seen.has(domain)) continue;
-    seen.add(domain);
-    unique.push({ result, domain });
+  const domains: string[] = [];
+  for (const settlement of settlements) {
+    if (settlement.status === "fulfilled" && settlement.value) {
+      const domain = settlement.value;
+      if (!seen.has(domain)) {
+        seen.add(domain);
+        domains.push(domain);
+      }
+    }
   }
-
-  return unique;
+  return domains;
 }
 
 async function resolveCompany({
-  result,
   domain,
   company,
 }: {
-  result: SearchResult;
   domain: string;
   company: CompanyProvider;
 }): Promise<CompanyData> {
@@ -107,9 +99,8 @@ async function resolveCompany({
   const registryData =
     companyResult.success && companyResult.data ? companyResult.data : null;
 
-  // Always keep the web domain — never let registry SIREN leak as domain
   return {
-    name: registryData?.name ?? result.title,
+    name: registryData?.name ?? domain,
     domain,
     sector: registryData?.sector ?? "",
     location: registryData?.location ?? "",
@@ -119,47 +110,61 @@ async function resolveCompany({
   };
 }
 
-async function resolveCompanies({
-  candidates,
-  company,
-  maxResults,
-}: {
-  candidates: Array<{ result: SearchResult; domain: string }>;
-  company: CompanyProvider;
-  maxResults: number;
-}): Promise<CompanyData[]> {
-  const toResolve = candidates.slice(0, maxResults);
-
-  const settlements = await Promise.allSettled(
-    toResolve.map(({ result, domain }) =>
-      resolveCompany({ result, domain, company }),
-    ),
-  );
-
-  return settlements
-    .filter((s) => s.status === "fulfilled")
-    .map((s) => s.value);
-}
-
 export async function discover({
   criteria,
   search,
   company,
+  llm,
 }: DiscoverOptions): Promise<Result<CompanyData[]>> {
   const maxResults = criteria.maxResults ?? 20;
 
-  const allResults = await runSearchStrategies({
+  const { results: allResults, allFailed } = await runSearchStrategies({
     strategies: criteria.searchStrategies,
     search,
   });
 
-  const candidates = deduplicateByDomain({ results: allResults });
+  if (allFailed) {
+    return { success: false, error: new Error("All search strategies failed") };
+  }
 
-  const companies = await resolveCompanies({
-    candidates,
-    company,
-    maxResults,
-  });
+  if (allResults.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const extractResult = await llm.extractCompanies(allResults);
+  if (!extractResult.success) {
+    logger.warn(
+      { error: extractResult.error.message },
+      "discover: extractCompanies failed — returning empty",
+    );
+    return { success: true, data: [] };
+  }
+
+  const uniqueNames = [...new Set(extractResult.data)];
+  if (uniqueNames.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const domainSettlements = await Promise.allSettled(
+    uniqueNames
+      .slice(0, maxResults * DOMAIN_RESOLUTION_BUFFER)
+      .map((name) => resolveCompanyDomain({ name, search })),
+  );
+
+  const domains = collectUniqueDomains({ settlements: domainSettlements });
+  if (domains.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const companySettlements = await Promise.allSettled(
+    domains
+      .slice(0, maxResults)
+      .map((domain) => resolveCompany({ domain, company })),
+  );
+
+  const companies = companySettlements
+    .filter((s) => s.status === "fulfilled")
+    .map((s) => s.value);
 
   return { success: true, data: companies };
 }

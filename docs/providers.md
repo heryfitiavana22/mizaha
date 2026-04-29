@@ -126,6 +126,7 @@ Types live in `src/lib/providers/interfaces/llm.ts`.
 interface LLMProvider {
   readonly name: string;
   extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
+  extractCompanies(results: SearchResult[]): Promise<Result<string[]>>;
   qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
   generateDraft(input: GenerateDraftInput): Promise<Result<string>>;
 }

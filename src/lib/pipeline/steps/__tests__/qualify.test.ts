@@ -28,18 +28,25 @@ describe("qualify", () => {
   it("skips company when scrape fails (error level 3) — continues with others", async () => {
     const anotherCompany = { ...fakeCompany, domain: "beta.fr", name: "Beta" };
     const scraper = makeMockScraperProvider({
-      scrape: vi
-        .fn()
-        .mockResolvedValueOnce({ success: false, error: new Error("Timeout") })
-        .mockResolvedValueOnce({
+      // scrapeWithFallback tries up to 9 URLs per company — fail all acme.fr, succeed for beta.fr
+      scrape: vi.fn().mockImplementation((url: string) => {
+        if (url.includes("acme.fr")) {
+          return Promise.resolve({
+            success: false,
+            error: new Error("Timeout"),
+          });
+        }
+        return Promise.resolve({
           success: true,
           data: {
-            url: "https://beta.fr",
+            url,
             title: "Beta",
-            content: "content",
+            content:
+              "We are Beta company, a SaaS startup based in Paris, actively hiring a senior full-stack developer. Our stack includes TypeScript, Node.js, and React. We recently closed a Series A funding round and are growing fast. Join our engineering team and help us build the future of B2B software.",
             metadata: {},
           },
-        }),
+        });
+      }),
     });
     const llm = makeMockLLMProvider();
 

@@ -449,7 +449,8 @@ async function runDiscover({
       withFallback({
         primary: providers.search.primary,
         backup: providers.search.backup,
-        run: (search) => discover({ criteria, search, company }),
+        run: (search) =>
+          discover({ criteria, search, company, llm: providers.llm }),
         onFallback: () => {
           usedSearchFallback = true;
         },

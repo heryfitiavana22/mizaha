@@ -45,7 +45,8 @@ export function makeMockScraperProvider(
       data: {
         url: "https://acme.fr",
         title: "Acme SAS",
-        content: "We are a SaaS company hiring a React developer",
+        content:
+          "We are a SaaS company based in Paris. We are actively hiring a senior React developer to join our growing engineering team. Our stack includes TypeScript, Node.js, and React. We recently raised a Series A and are expanding rapidly. Contact us at jobs@acme.fr.",
         metadata: {},
       },
     }),
@@ -82,6 +83,9 @@ export function makeMockLLMProvider(
     extractCriteria: vi
       .fn()
       .mockResolvedValue({ success: true, data: fakeCriteria }),
+    extractCompanies: vi
+      .fn()
+      .mockResolvedValue({ success: true, data: ["Acme SAS"] }),
     qualify: vi.fn().mockResolvedValue({
       success: true,
       data: fakeQualifiedCompany.qualification,

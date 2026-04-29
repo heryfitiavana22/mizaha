@@ -52,11 +52,13 @@ export const searchCriteriaSchema = z.object({
     .array(z.string())
     .describe(
       "3 to 5 search queries ready to be sent to a web search engine. " +
-        "Each query must target a different angle: job postings, news, sector directories, funding announcements, etc. " +
-        "Use search operators when useful (site:, intitle:). Be specific — generic queries return noise. " +
-        "Examples: 'offre emploi développeur React startup Paris', " +
-        "'recrutement CTO SaaS France 2024', " +
-        "'startup fintech France levée de fonds 2024 site:bpifrance.fr'",
+        "Goal: surface pages of REAL companies (their own website, careers page, blog, news coverage) — not aggregated job board listings. " +
+        "Vary the angles: company careers pages, funding announcements, sector news, tech blogs. " +
+        "Avoid site: operators pointing to aggregated job boards (indeed.com, linkedin.com, welcometothejungle.com) — they list many companies at once. " +
+        "Prefer queries that land on a specific company's own page. " +
+        "Examples: 'startup SaaS TypeScript Node.js recrutement Paris site:...', " +
+        "'\"nous recrutons\" développeur senior fintech France 2024', " +
+        "'levée de fonds startup React 2024 site:...'",
     ),
 
   qualificationCriteria: z
@@ -122,7 +124,7 @@ Extract structured search criteria from the user's natural language query.
 Query: "${rawQuery}"${uiCriteriaSection}
 
 Instructions:
-- For searchStrategies: generate queries ready to copy-paste into a search engine. Vary the angles (job postings, news, directories). Be specific — "offre emploi développeur React startup Paris" is good, "entreprise France" is useless.
+- For searchStrategies: generate queries that find specific company pages (careers, about, blog, news coverage). Avoid queries that return aggregated job boards — the goal is to land on a real company's own page, not a listing of many companies.
 - For qualificationCriteria: write in French what must be found on the company website to confirm relevance. Each criterion must be verifiable from website content.
 - Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
 }

@@ -134,7 +134,7 @@ src/lib/pipeline/
 
 `uiCriteria` (explicit selections from the chat UI) is flattened by `extract-criteria.ts` before reaching the LLM (nested keys like `{"search": {"location": "X"}}` are collapsed to `{"location": "X"}`). The LLM produces `SearchCriteria` including `searchStrategies` (ready-to-run Brave queries) and `qualificationCriteria` (what to verify on each company site).
 
-`discover.ts` launches all `searchStrategies` in parallel (limit=10 each), deduplicates by domain, filters noise domains (registries, job boards, news sites), and resolves company metadata. SIREN numbers (pure-digit strings) returned by SIRENE/Pappers as domain are discarded — the original web domain is always preserved.
+`discover.ts` launches all `searchStrategies` in parallel (limit=10 each), then calls the LLM to extract real company names from all search results at once (titles + URLs + snippets). This handles both direct company pages and job board postings (e.g. "Devoteam looking for a dev" → extracts "Devoteam"). For each extracted name, a targeted Brave search resolves the real company domain. Finally, Pappers/SIRENE fetches official metadata per domain. This approach requires no hardcoded noise-domain list — the LLM filters aggregators and directories naturally.
 
 `qualify.ts` tries priority pages first (`/jobs`, `/recrutement`, `/careers`, etc.) before the homepage, then passes scraped content + `qualificationCriteria` to the LLM. The result carries `scrapedContent` to avoid re-scraping in the enrich step. Companies scoring below **0.5** are filtered out.
 
