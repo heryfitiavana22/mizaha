@@ -51,14 +51,16 @@ export const searchCriteriaSchema = z.object({
   searchStrategies: z
     .array(z.string())
     .describe(
-      "3 to 5 search queries ready to be sent to a web search engine. " +
-        "Goal: surface pages of REAL companies (their own website, careers page, blog, news coverage) — not aggregated job board listings. " +
-        "Vary the angles: company careers pages, funding announcements, sector news, tech blogs. " +
-        "Avoid site: operators pointing to aggregated job boards (indeed.com, linkedin.com, welcometothejungle.com) — they list many companies at once. " +
-        "Prefer queries that land on a specific company's own page. " +
-        "Examples: 'startup SaaS TypeScript Node.js recrutement Paris site:...', " +
-        "'\"nous recrutons\" développeur senior fintech France 2024', " +
-        "'levée de fonds startup React 2024 site:...'",
+      "3 to 5 search queries ready to be sent to Brave Search. " +
+        "Goal: surface pages of real individual companies (careers pages, about pages, blog posts, funding news) — not aggregated listings. " +
+        "Write natural-language queries — NOT boolean AND chains. " +
+        'Use at most one quoted phrase per query. Stacking multiple quoted terms (\'"A" "B" "C"\') returns zero results in practice. ' +
+        "Vary the angles: company hiring pages, funding announcements, sector blogs, press coverage. " +
+        "Avoid site: operators pointing to aggregated platforms (linkedin.com, indeed.com, welcometothejungle.com). " +
+        "Good examples: 'startup SaaS Paris recrutement développeur TypeScript 2024', " +
+        "'levée de fonds startup fintech France recrutement ingénieur', " +
+        "'\"nous recrutons\" agence e-commerce France prestataire'. " +
+        'Bad examples (too restrictive, return zero results): \'"nous recrutons" "TypeScript" "freelance" "Node.js"\'.',
     ),
 
   qualificationCriteria: z
@@ -124,7 +126,7 @@ Extract structured search criteria from the user's natural language query.
 Query: "${rawQuery}"${uiCriteriaSection}
 
 Instructions:
-- For searchStrategies: generate queries that find specific company pages (careers, about, blog, news coverage). Avoid queries that return aggregated job boards — the goal is to land on a real company's own page, not a listing of many companies.
+- For searchStrategies: write broad, natural-language queries that Brave can execute. Do NOT stack multiple quoted phrases in one query — it drags results to zero. One quoted phrase per query maximum. Target company pages (careers, about, blog) or news coverage (funding, launches, hiring).
 - For qualificationCriteria: write in French what must be found on the company website to confirm relevance. Each criterion must be verifiable from website content.
 - Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
 }

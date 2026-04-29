@@ -21,9 +21,10 @@ export function buildDiscoverExtractPrompt({
 
 Rules:
 - For individual job postings: extract the HIRING company name (not the job platform).
-- For company pages (careers, about, blog, news): extract the company name.
-- Ignore aggregated results listing many companies (e.g. "350 offres | Indeed") — skip them.
-- Ignore job boards, freelance platforms, directories, registries, news outlets — they are not prospects.
+- For company pages (careers, about, blog): extract the company name.
+- For news articles (funding rounds, product launches, hires): extract the company BEING COVERED — not the news source (TechCrunch, Les Echos, BFM, etc. are never prospects).
+- Skip aggregated listings that show many companies at once (e.g. "350 offres | Indeed", "Top 50 startups France").
+- Skip job boards, freelance platforms, aggregated directories, company registries — they are not prospects themselves.
 - No duplicates.
 - If a result yields nothing extractable, skip it.
 
