@@ -19,9 +19,10 @@ const DOMAIN_RESOLUTION_BUFFER = 2;
 const DOMAIN_RESOLUTION_EXCLUSIONS =
   "-site:linkedin.com -site:reddit.com -site:indeed.com -site:indeed.fr -site:welcometothejungle.com -site:jobteaser.com";
 
-// Global internet platforms — never a B2B prospect for any use case (UC1, UC2, UC3...)
+// Platforms and aggregators — never a B2B prospect for any use case (UC1, UC2, UC3...)
 // Covers subdomains: de.linkedin.com, jp.linkedin.com, etc.
 const PLATFORM_DOMAINS = new Set([
+  // Social & community
   "linkedin.com",
   "reddit.com",
   "twitter.com",
@@ -31,6 +32,17 @@ const PLATFORM_DOMAINS = new Set([
   "youtube.com",
   "tiktok.com",
   "github.com",
+  // Job boards
+  "welcometothejungle.com",
+  "indeed.com",
+  "indeed.fr",
+  "jobteaser.com",
+  "monster.fr",
+  "apec.fr",
+  "francetravail.fr",
+  "pole-emploi.fr",
+  "glassdoor.com",
+  "hellowork.com",
 ]);
 
 function isPlatformDomain(domain: string): boolean {
@@ -162,6 +174,7 @@ export async function discover({
   }
 
   const uniqueNames = [...new Set(extractResult.data)];
+  logger.info({ names: uniqueNames }, "discover: extracted company names");
   if (uniqueNames.length === 0) {
     return { success: true, data: [] };
   }
