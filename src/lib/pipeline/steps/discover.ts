@@ -15,9 +15,9 @@ const SEARCH_LIMIT_PER_QUERY = 10;
 // Fetch more candidates than needed — some names may fail to resolve or map to the same domain
 const DOMAIN_RESOLUTION_BUFFER = 2;
 
-// Excluded from domain resolution queries — they return job board pages, not the company's own site
+// Excluded from domain resolution queries — high-traffic platforms rank above the company's own site
 const DOMAIN_RESOLUTION_EXCLUSIONS =
-  "-site:linkedin.com -site:indeed.com -site:indeed.fr -site:welcometothejungle.com -site:jobteaser.com";
+  "-site:linkedin.com -site:reddit.com -site:indeed.com -site:indeed.fr -site:welcometothejungle.com -site:jobteaser.com";
 
 type DiscoverOptions = {
   criteria: SearchCriteria;

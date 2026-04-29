@@ -24,7 +24,7 @@ Rules:
 - For company pages (careers, about, blog): extract the company name.
 - For news articles (funding rounds, product launches, hires): extract the company BEING COVERED — not the news source (TechCrunch, Les Echos, BFM, etc. are never prospects).
 - Skip aggregated listings that show many companies at once (e.g. "350 offres | Indeed", "Top 50 startups France").
-- Skip job boards, freelance platforms, aggregated directories, company registries — they are not prospects themselves.
+- Skip job boards, freelance platforms, social media platforms (LinkedIn, Reddit, Twitter, Facebook, Instagram...), aggregated directories, company registries — they are not prospects themselves.
 - No duplicates.
 - If a result yields nothing extractable, skip it.
 
