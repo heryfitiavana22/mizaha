@@ -182,7 +182,13 @@ async function upsertCompany({
       })
       .onConflictDoUpdate({
         target: companiesTable.domain,
-        set: { name: company.name, lastScrapedAt: new Date() },
+        set: {
+          name: company.name,
+          sector: company.sector || null,
+          location: company.location || null,
+          employeeCount: company.employeeCount ?? null,
+          lastScrapedAt: new Date(),
+        },
       })
       .returning({ id: companiesTable.id });
     return { success: true, data: row.id };
@@ -199,16 +205,26 @@ async function saveContacts({
   contacts: Contact[];
 }): Promise<Result<undefined>> {
   try {
-    for (const contact of contacts) {
-      if (!contact.name) continue; // name is notNull in DB schema
-      await db.insert(contactsTable).values({
-        companyId,
-        name: contact.name,
-        title: contact.title,
-        email: contact.email,
-        linkedinUrl: contact.linkedinUrl,
-      });
-    }
+    const seenEmails = new Set<string>();
+    const toInsert = contacts.filter((contact) => {
+      if (!contact.name) return false; // name is notNull in DB schema
+      if (seenEmails.has(contact.email)) return false;
+      seenEmails.add(contact.email);
+      return true;
+    });
+
+    await Promise.allSettled(
+      toInsert.map((contact) =>
+        db.insert(contactsTable).values({
+          companyId,
+          name: contact.name!,
+          title: contact.title,
+          email: contact.email,
+          linkedinUrl: contact.linkedinUrl,
+        }),
+      ),
+    );
+
     return { success: true, data: undefined };
   } catch (error) {
     return { success: false, error: toError(error) };
@@ -489,7 +505,7 @@ async function runQualify({
         domain: c.domain,
         score: c.qualification.score,
         reason: c.qualification.reason,
-        matchedSignals: c.qualification.matchedSignals,
+        matchedCriteria: c.qualification.matchedCriteria,
       })),
     }),
   });
@@ -664,7 +680,16 @@ export async function runPipeline({
   searchId,
   useCaseName,
 }: RunPipelineOptions): Promise<void> {
-  const config = getUseCase({ name: useCaseName });
+  const configResult = getUseCase({ name: useCaseName });
+  if (!configResult.success) {
+    logger.error(
+      { searchId, useCaseName, error: configResult.error.message },
+      "Unknown use case — pipeline aborted",
+    );
+    await updateSearchStatus({ searchId, status: "failed" });
+    return;
+  }
+  const config = configResult.data;
 
   await updateSearchStatus({ searchId, status: "running" });
 

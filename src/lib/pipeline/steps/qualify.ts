@@ -1,12 +1,27 @@
 import type { LLMProvider } from "@/lib/providers/interfaces/llm";
 import type { ScraperProvider } from "@/lib/providers/interfaces/scraper";
-import { buildCompanyUrl } from "@/lib/utils/url";
+import logger from "@/lib/logger";
 import type {
   CompanyData,
   QualifiedCompany,
   Result,
   SearchCriteria,
 } from "@/types";
+
+const SCORE_THRESHOLD = 0.5;
+
+// Pages most likely to contain relevant content depending on qualification intent.
+// Tried in order before falling back to the homepage.
+const PRIORITY_PATHS = [
+  "/jobs",
+  "/recrutement",
+  "/carrieres",
+  "/careers",
+  "/equipe",
+  "/team",
+  "/about",
+  "/a-propos",
+];
 
 type QualifyOptions = {
   companies: CompanyData[];
@@ -22,29 +37,66 @@ type QualifyOneOptions = {
   llm: LLMProvider;
 };
 
+async function scrapeWithFallback({
+  domain,
+  scraper,
+}: {
+  domain: string;
+  scraper: ScraperProvider;
+}): Promise<{ content: string; url: string } | null> {
+  // Try priority pages first, then homepage
+  const urlsToTry = [
+    ...PRIORITY_PATHS.map((path) => `https://${domain}${path}`),
+    `https://${domain}`,
+  ];
+
+  for (const url of urlsToTry) {
+    const result = await scraper.scrape(url);
+    if (result.success && result.data.content.length > 200) {
+      return { content: result.data.content, url };
+    }
+  }
+
+  return null;
+}
+
 async function qualifyOne({
   company,
   criteria,
   scraper,
   llm,
-}: QualifyOneOptions): Promise<Result<QualifiedCompany> | null> {
-  const url = buildCompanyUrl({ domain: company.domain });
-  const scrapeResult = await scraper.scrape(url);
+}: QualifyOneOptions): Promise<QualifiedCompany | null> {
+  const scraped = await scrapeWithFallback({
+    domain: company.domain,
+    scraper,
+  });
 
-  // Error level 3 — scrape failed: skip this company, continue with others
-  if (!scrapeResult.success) return null;
+  if (!scraped) {
+    logger.warn(
+      { domain: company.domain },
+      "qualify: scrape failed for all pages — skipping company",
+    );
+    return null;
+  }
 
   const qualifyResult = await llm.qualify({
     company,
     criteria,
-    scrapedContent: scrapeResult.data.content,
+    scrapedContent: scraped.content,
   });
 
-  if (!qualifyResult.success) return null;
+  if (!qualifyResult.success) {
+    logger.warn(
+      { domain: company.domain, error: qualifyResult.error.message },
+      "qualify: LLM qualification failed — skipping company",
+    );
+    return null;
+  }
 
   return {
-    success: true,
-    data: { ...company, qualification: qualifyResult.data },
+    ...company,
+    qualification: qualifyResult.data,
+    scrapedContent: scraped.content,
   };
 }
 
@@ -61,8 +113,8 @@ export async function qualify({
   const qualified = settlements
     .filter((s) => s.status === "fulfilled")
     .map((s) => s.value)
-    .filter((r) => r !== null && r.success)
-    .map((r) => r.data);
+    .filter((result): result is QualifiedCompany => result !== null)
+    .filter((company) => company.qualification.score >= SCORE_THRESHOLD);
 
   return { success: true, data: qualified };
 }

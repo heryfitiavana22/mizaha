@@ -14,7 +14,10 @@ export const fakeQualifiedCompany: QualifiedCompany = {
   qualification: {
     score: 0.85,
     reason: "Hiring React developer, recently funded",
-    matchedSignals: ["hiring_dev", "recently_funded"],
+    matchedCriteria: [
+      "L'entreprise recrute un développeur React",
+      "Financement récent annoncé",
+    ],
   },
 };
 

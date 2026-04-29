@@ -132,13 +132,13 @@ src/lib/pipeline/
 └── index.ts                  → orchestrator — step order + pipeline_runs
 ```
 
-`uiCriteria` (explicit selections from the chat UI) is normalized by `extract-criteria.ts` before reaching the LLM: common key aliases (`industry`→`sector`, `tech_stack`→`techStack`, `min_employees`+`max_employees`→`employeeRange`, etc.) are mapped to canonical `SearchCriteria` field names. The LLM then uses the cleaned criteria alongside `rawQuery` to produce a more accurate `SearchCriteria`. If `uiCriteria` is empty, the prompt falls back to `rawQuery` only.
+`uiCriteria` (explicit selections from the chat UI) is flattened by `extract-criteria.ts` before reaching the LLM (nested keys like `{"search": {"location": "X"}}` are collapsed to `{"location": "X"}`). The LLM produces `SearchCriteria` including `searchStrategies` (ready-to-run Brave queries) and `qualificationCriteria` (what to verify on each company site).
 
-`discover.ts` filters out SIREN codes (pure digit strings) that appear as domains and resolves all company lookups in parallel (`Promise.allSettled`).
+`discover.ts` launches all `searchStrategies` in parallel (limit=10 each), deduplicates by domain, filters noise domains (registries, job boards, news sites), and resolves company metadata. SIREN numbers (pure-digit strings) returned by SIRENE/Pappers as domain are discarded — the original web domain is always preserved.
 
-`qualify.ts` and `enrich.ts` also run per-company work in parallel (`Promise.allSettled`) — a single company failure does not block others.
+`qualify.ts` tries priority pages first (`/jobs`, `/recrutement`, `/careers`, etc.) before the homepage, then passes scraped content + `qualificationCriteria` to the LLM. The result carries `scrapedContent` to avoid re-scraping in the enrich step. Companies scoring below **0.5** are filtered out.
 
-`enrich.ts` applies a score threshold of **0.35**: companies below it are skipped entirely (no email lookup).
+`enrich.ts` reuses `scrapedContent` from `qualify` if available (zero additional Firecrawl credits). Falls back to the email provider only if no emails were found in the already-scraped content.
 
 `index.ts` is the only place that knows the step order and traces execution.
 
@@ -150,10 +150,16 @@ Each use case is a configuration, not different code.
 
 ```text
 src/lib/use-cases/
-├── freelance.ts   → which sources to activate, which signals, how to score
+├── freelance.ts   → providers, enrichStrategy, maxResults
 ├── agency.ts      → (future)
-└── index.ts       → registry, lookup by use case name
+└── index.ts       → registry, getUseCase() returns Result<UseCaseConfig>
 ```
+
+`UseCaseConfig` fields:
+
+- `providers` — which adapters to use
+- `enrichStrategy: "domain" | "persona"` — `"domain"` finds any email on the site; `"persona"` targets a specific role (Use Case 3)
+- `maxResults` — default company count for this use case (overridable per search via `SearchCriteria.maxResults`)
 
 The pipeline receives the use case config and adapts. That's all.
 

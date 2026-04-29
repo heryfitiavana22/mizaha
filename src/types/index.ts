@@ -44,15 +44,18 @@ export type Contact = {
 export type SearchCriteria = {
   sector?: string;
   location?: string;
-  signals: string[]; // e.g.: ["recently_funded", "hiring_dev"]
   techStack?: string[];
   employeeRange?: { min: number; max: number };
+  targetPersona?: string;
+  maxResults?: number;
+  searchStrategies: string[];
+  qualificationCriteria: string[];
 };
 
 export type QualificationResult = {
   score: number; // 0.0 to 1.0
   reason: string;
-  matchedSignals: string[];
+  matchedCriteria: string[];
 };
 
 // ---------------------------------------------------------------------------
@@ -60,6 +63,7 @@ export type QualificationResult = {
 // ---------------------------------------------------------------------------
 export type QualifiedCompany = CompanyData & {
   qualification: QualificationResult;
+  scrapedContent?: string;
 };
 
 export type EnrichedCompany = QualifiedCompany & {

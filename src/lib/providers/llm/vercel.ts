@@ -76,6 +76,7 @@ export class VercelLLMProvider implements LLMProvider {
   async qualify({
     company,
     criteria,
+    scrapedContent,
   }: QualifyInput): Promise<Result<QualificationResult>> {
     const start = Date.now();
 
@@ -84,7 +85,7 @@ export class VercelLLMProvider implements LLMProvider {
         model: this.model,
         output: Output.object({ schema: qualificationResultSchema }),
         maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
-        prompt: buildQualifyPrompt({ company, criteria }),
+        prompt: buildQualifyPrompt({ company, criteria, scrapedContent }),
       });
 
       logger.info(

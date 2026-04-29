@@ -115,9 +115,10 @@ This table shows what a human does manually today, and how the system automates 
 
 1. Create `src/lib/use-cases/[name].ts`
 2. Define:
-   - The criteria to extract from natural language
-   - The sources to activate in priority
-   - The scoring / qualification logic
-   - The output format
+   - `providers` — which adapters to activate
+   - `enrichStrategy: "domain" | "persona"` — `"domain"` for company-level email lookup; `"persona"` for targeting a specific role (Use Case 3)
+   - `maxResults` — default number of companies to return
 3. Register it in `src/lib/use-cases/index.ts`
 4. The pipeline handles it automatically — nothing else to touch
+
+The search criteria (`searchStrategies`, `qualificationCriteria`, `targetPersona`, etc.) are generated dynamically by the LLM from the user's natural language query. No hardcoded signals or scoring weights needed.

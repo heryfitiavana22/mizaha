@@ -3,6 +3,7 @@ import type { EmailProvider } from "@/lib/providers/interfaces/email";
 import type { LLMProvider } from "@/lib/providers/interfaces/llm";
 import type { ScraperProvider } from "@/lib/providers/interfaces/scraper";
 import type { SearchProvider } from "@/lib/providers/interfaces/search";
+import type { Result } from "@/types";
 import { freelanceConfig } from "./freelance";
 
 export type UseCaseProviders = {
@@ -13,20 +14,23 @@ export type UseCaseProviders = {
   llm: LLMProvider;
 };
 
+export type EnrichStrategy = "domain" | "persona";
+
 export type UseCaseConfig = {
   name: string;
   description: string;
-  signals: string[];
-  scoringWeights: Record<string, number>;
   providers: UseCaseProviders;
+  enrichStrategy: EnrichStrategy;
+  maxResults: number;
 };
 
 const USE_CASE_REGISTRY: Record<string, UseCaseConfig> = {
   freelance: freelanceConfig,
 };
 
-export function getUseCase({ name }: { name: string }): UseCaseConfig {
+export function getUseCase({ name }: { name: string }): Result<UseCaseConfig> {
   const config = USE_CASE_REGISTRY[name];
-  if (!config) throw new Error(`Unknown use case: "${name}"`);
-  return config;
+  if (!config)
+    return { success: false, error: new Error(`Unknown use case: "${name}"`) };
+  return { success: true, data: config };
 }

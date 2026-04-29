@@ -1,50 +1,110 @@
 import { z } from "zod";
 import type { ExtractCriteriaInput } from "@/lib/providers/interfaces/llm";
 
-// OpenAI Structured Outputs: all fields must be in `required` — use .nullable() + transform to keep SearchCriteria types unchanged
 export const searchCriteriaSchema = z.object({
   sector: z
     .string()
     .nullable()
     .transform((v) => v ?? undefined)
     .describe(
-      "Business sector or industry (e.g. SaaS, e-commerce, fintech). Use null if not mentioned.",
+      "Business sector or industry (e.g. SaaS, e-commerce, fintech). null if not mentioned.",
     ),
+
   location: z
     .string()
     .nullable()
     .transform((v) => v ?? undefined)
     .describe(
-      "Geographic location in France (e.g. Paris, Île-de-France, Lyon). Use null if not mentioned.",
+      "City or region in France (e.g. Paris, Lyon, Île-de-France). null if not mentioned.",
     ),
-  signals: z
-    .array(z.string())
-    .describe(
-      "Qualifying signals found in the query. Use these exact strings: recently_funded, hiring_dev, no_internal_dev, new_product, weak_online_presence, growing_team",
-    ),
+
   techStack: z
     .array(z.string())
     .nullable()
     .transform((v) => v ?? undefined)
     .describe(
-      "Technologies explicitly mentioned (e.g. React, Node.js, Python). Use null if none mentioned.",
+      "Technologies explicitly mentioned (e.g. React, Node.js, Python). null if none.",
     ),
+
   employeeRange: z
     .object({ min: z.number(), max: z.number() })
     .nullable()
     .transform((v) => v ?? undefined)
-    .describe("Employee count range if mentioned. Use null if not specified."),
+    .describe("Employee count range if mentioned. null if not specified."),
+
+  targetPersona: z
+    .string()
+    .nullable()
+    .transform((v) => v ?? undefined)
+    .describe(
+      "Specific role to target if mentioned (e.g. CTO, Head of Product, HR Director). null if not mentioned.",
+    ),
+
+  maxResults: z
+    .number()
+    .nullable()
+    .transform((v) => v ?? undefined)
+    .describe(
+      "Maximum number of results explicitly requested by the user. null if not specified.",
+    ),
+
+  searchStrategies: z
+    .array(z.string())
+    .describe(
+      "3 to 5 search queries ready to be sent to a web search engine. " +
+        "Each query must target a different angle: job postings, news, sector directories, funding announcements, etc. " +
+        "Use search operators when useful (site:, intitle:). Be specific — generic queries return noise. " +
+        "Examples: 'offre emploi développeur React startup Paris', " +
+        "'recrutement CTO SaaS France 2024', " +
+        "'startup fintech France levée de fonds 2024 site:bpifrance.fr'",
+    ),
+
+  qualificationCriteria: z
+    .array(z.string())
+    .describe(
+      "2 to 4 criteria to verify on each company website to confirm relevance. " +
+        "Written in French as affirmations to validate — they will be shown to the user. " +
+        "Be specific and verifiable from website content. " +
+        "Examples: \"L'entreprise a une offre d'emploi développeur ouverte\", " +
+        '"Aucun développeur interne visible dans l\'équipe ou sur le site", ' +
+        '"L\'entreprise a annoncé un financement récent"',
+    ),
 });
+
+function flattenUiCriteria({
+  uiCriteria,
+}: {
+  uiCriteria: Record<string, unknown>;
+}): Record<string, unknown> {
+  const flat: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(uiCriteria)) {
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      for (const [nestedKey, nestedValue] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
+        flat[nestedKey] = nestedValue;
+      }
+    } else {
+      flat[key] = value;
+    }
+  }
+  return flat;
+}
 
 export function buildExtractCriteriaPrompt({
   rawQuery,
   useCase,
   uiCriteria,
 }: ExtractCriteriaInput): string {
-  const uiCriteriaSection =
+  const flat =
     uiCriteria && Object.keys(uiCriteria).length > 0
-      ? `\n\nThe user also explicitly selected the following criteria via the UI — treat these as high-confidence signals:\n${Object.entries(
-          uiCriteria,
+      ? flattenUiCriteria({ uiCriteria })
+      : {};
+
+  const uiCriteriaSection =
+    Object.keys(flat).length > 0
+      ? `\n\nThe user also explicitly selected the following criteria via the UI — treat these as hard constraints:\n${Object.entries(
+          flat,
         )
           .map(
             ([k, v]) =>
@@ -55,20 +115,14 @@ export function buildExtractCriteriaPrompt({
 
   return `You are a B2B lead generation assistant specialized in French companies.
 
-Use case context: ${useCase}
+Use case: ${useCase}
 
-The user is a French professional looking for potential client companies. Extract structured search criteria from their natural language query.
+Extract structured search criteria from the user's natural language query.
 
 Query: "${rawQuery}"${uiCriteriaSection}
 
-Available signals — use these exact strings when the query implies them:
-- "recently_funded": company received funding recently
-- "hiring_dev": company has open developer positions
-- "no_internal_dev": company has no internal developer
-- "new_product": company launched a new product or feature
-- "weak_online_presence": company has an outdated or minimal web presence
-- "growing_team": company is hiring actively and expanding
-
-If no signals are explicitly mentioned, infer the most relevant ones from the use case context and query intent.
-Omit optional fields entirely if they are not mentioned or cannot be inferred.`;
+Instructions:
+- For searchStrategies: generate queries ready to copy-paste into a search engine. Vary the angles (job postings, news, directories). Be specific — "offre emploi développeur React startup Paris" is good, "entreprise France" is useless.
+- For qualificationCriteria: write in French what must be found on the company website to confirm relevance. Each criterion must be verifiable from website content.
+- Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
 }

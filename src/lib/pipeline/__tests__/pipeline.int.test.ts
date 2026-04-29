@@ -51,11 +51,14 @@ describe("runPipeline (integration)", () => {
   beforeEach(async () => {
     await resetTestDb();
     vi.mocked(getUseCase).mockReturnValue({
-      name: "freelance",
-      description: "Test use case",
-      signals: [],
-      scoringWeights: {},
-      providers: makeTestProviders(),
+      success: true,
+      data: {
+        name: "freelance",
+        description: "Test use case",
+        enrichStrategy: "domain",
+        maxResults: 20,
+        providers: makeTestProviders(),
+      },
     });
   });
 
@@ -137,15 +140,20 @@ describe("runPipeline (integration)", () => {
   it("sets search status to failed when extract-criteria fails", async () => {
     const error = new Error("LLM down");
     vi.mocked(getUseCase).mockReturnValue({
-      name: "freelance",
-      description: "Test",
-      signals: [],
-      scoringWeights: {},
-      providers: {
-        ...makeTestProviders(),
-        llm: makeMockLLMProvider({
-          extractCriteria: vi.fn().mockResolvedValue({ success: false, error }),
-        }),
+      success: true,
+      data: {
+        name: "freelance",
+        description: "Test",
+        enrichStrategy: "domain",
+        maxResults: 20,
+        providers: {
+          ...makeTestProviders(),
+          llm: makeMockLLMProvider({
+            extractCriteria: vi
+              .fn()
+              .mockResolvedValue({ success: false, error }),
+          }),
+        },
       },
     });
 

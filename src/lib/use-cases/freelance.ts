@@ -12,17 +12,11 @@ const OPENAI_MODEL_ID = "gpt-5.4-mini";
 export const freelanceConfig: UseCaseConfig = {
   name: "freelance",
   description: "Freelance developer looking for client missions in France",
-  signals: ["recently_funded", "hiring_dev", "no_internal_dev", "new_product"],
-  scoringWeights: {
-    hiring_dev: 0.35,
-    no_internal_dev: 0.3,
-    recently_funded: 0.2,
-    new_product: 0.15,
-  },
+  enrichStrategy: "domain",
+  maxResults: 20,
   providers: {
     search: {
       primary: new BraveSearchProvider(),
-      // SerpAPI backup not yet implemented (Phase 6 MVP only)
     },
     company: {
       primary: new SireneCompanyProvider(),
@@ -30,7 +24,7 @@ export const freelanceConfig: UseCaseConfig = {
     },
     scraper: {
       primary: new FirecrawlScraperProvider(),
-      // Playwright backup not yet implemented (Phase 6 MVP only)
+      // Playwright backup not yet implemented
     },
     email: {
       primary: new FirecrawlEmailProvider(

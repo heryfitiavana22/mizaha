@@ -39,7 +39,6 @@ export type SearchCriteria = {
   location?: string;
   techStack?: string[];
   employeeRange?: { min: number; max: number };
-  remoteOk?: boolean;
   targetPersona?: string; // Use Case 3 : "CTO", "Head of Product", "DRH"
   maxResults?: number; // Use Case 2 : volume élevé (centaines de résultats)
   searchStrategies: string[]; // requêtes Brave à lancer, générées par le LLM
@@ -95,12 +94,6 @@ export const searchCriteriaSchema = z.object({
     .nullable()
     .transform((v) => v ?? undefined)
     .describe("Fourchette d'effectifs si mentionnée. null sinon."),
-
-  remoteOk: z
-    .boolean()
-    .nullable()
-    .transform((v) => v ?? undefined)
-    .describe("true si le télétravail/remote est mentionné ou impliqué."),
 
   searchStrategies: z
     .array(z.string())
