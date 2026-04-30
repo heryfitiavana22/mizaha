@@ -101,15 +101,15 @@ describe("discover — company mode", () => {
     expect(result.data).toHaveLength(1);
   });
 
-  it("skips company when findByName returns null", async () => {
-    const company = makeMockCompanyProvider({
-      findByName: vi.fn().mockResolvedValue({ success: true, data: null }),
+  it("skips company when Brave returns no usable domain", async () => {
+    const search = makeMockSearchProvider({
+      search: vi.fn().mockResolvedValue({ success: true, data: [] }),
     });
 
     const result = await discover({
       criteria: criteriaWithBrave,
-      search: makeMockSearchProvider(),
-      company,
+      search,
+      company: makeMockCompanyProvider(),
       llm: makeMockLLMProvider(),
     });
 

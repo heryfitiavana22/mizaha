@@ -44,12 +44,12 @@ This is the core of the pipeline. The discover step is **signal-aware**: it uses
 
 ### Signal → Source mapping
 
-| Signal type                | Primary source              | How                                                         |
-| -------------------------- | --------------------------- | ----------------------------------------------------------- |
-| "hiring dev"               | France Travail API          | Free official API → job postings → extract company name     |
-| "tech jobs"                | WTTJ scraping via Firecrawl | Scrape search results pages → extract company names         |
-| "sector + location + size" | Pappers `search()` / SIRENE | Direct structured query → returns companies with domains    |
-| "funding / news"           | Brave targeted queries      | LLM extracts company names from results → domain resolution |
+| Signal type                | Primary source         | How                                                              |
+| -------------------------- | ---------------------- | ---------------------------------------------------------------- |
+| "hiring dev"               | France Travail API     | Free official API → job postings → extract company name          |
+| "tech jobs"                | WTTJ Algolia API       | Public Algolia index → company name + slug → no scraping, no LLM |
+| "sector + location + size" | SIRENE                 | Direct structured query → returns companies with domains         |
+| "funding / news"           | Brave targeted queries | LLM extracts company names from results → domain resolution      |
 
 ### Flow for "find companies" (targetEntity = "company")
 
@@ -58,14 +58,16 @@ signalSources (from SearchCriteria)
   ↓
 Run in parallel:
   France Travail API → job postings → company names
-  WTTJ scraping → job postings → company names
-  Pappers search() → company data with domains
+  WTTJ Algolia API → company names + slugs (no scraping)
+  SIRENE search() → company data with domains
   Brave queries → LLM extracts company names → domain resolution
 
 Converge → all company names
   ↓
 For each company name without domain:
-  Pappers findByName() → official domain + company data
+  Brave Search "name site officiel" → first non-aggregator domain
+  nameMatchesResult() validates the domain actually relates to the company
+  dev/staging subdomains stripped (dev., staging., app., etc.)
   ↓
 Deduplicate by domain
   ↓

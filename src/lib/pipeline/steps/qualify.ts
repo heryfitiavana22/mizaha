@@ -38,6 +38,18 @@ type QualifyOneCompanyOptions = {
   llm: LLMProvider;
 };
 
+function looksLikeErrorPage(content: string): boolean {
+  const header = content.slice(0, 400).toLowerCase();
+  return (
+    header.includes("404") ||
+    header.includes("page not found") ||
+    header.includes("page introuvable") ||
+    header.includes("page non trouv") ||
+    header.includes("n'existe pas") ||
+    header.includes("does not exist")
+  );
+}
+
 async function scrapeWithFallback({
   domain,
   scraper,
@@ -52,7 +64,11 @@ async function scrapeWithFallback({
 
   for (const url of urlsToTry) {
     const result = await scraper.scrape(url);
-    if (result.success && result.data.content.length > 200) {
+    if (
+      result.success &&
+      result.data.content.length > 200 &&
+      !looksLikeErrorPage(result.data.content)
+    ) {
       return { content: result.data.content, url };
     }
   }
@@ -143,11 +159,25 @@ async function qualifyCompanies({
       qualifyOneCompany({ company, criteria, scraper, llm }),
     ),
   );
-  const qualified = settlements
+  const scored = settlements
     .filter((settlement) => settlement.status === "fulfilled")
     .map((settlement) => settlement.value)
-    .filter((result): result is QualifiedCompany => result !== null)
-    .filter((company) => company.qualification.score >= SCORE_THRESHOLD);
+    .filter((result): result is QualifiedCompany => result !== null);
+
+  for (const c of scored) {
+    logger.info(
+      {
+        domain: c.domain,
+        score: c.qualification.score,
+        reason: c.qualification.reason,
+      },
+      "qualify: score",
+    );
+  }
+
+  const qualified = scored.filter(
+    (c) => c.qualification.score >= SCORE_THRESHOLD,
+  );
   return { success: true, data: qualified };
 }
 

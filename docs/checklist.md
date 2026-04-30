@@ -197,12 +197,17 @@ Input and output types come from `src/types/index.ts`.
   - Signature: `discover({ criteria, search, company }: Options): Promise<Result<CompanyData[]>>`
   - Calls search provider + company provider
   - Filters SIREN codes (pure digit strings) — not valid web domains
+  - Strips dev/staging subdomains from resolved domains (`dev.`, `staging.`, `app.`, etc.)
+  - `nameMatchesResult()` validates Brave result actually relates to the company name before accepting domain
+  - Extended aggregator domain blocklist (social, news, registries, app stores, etc.)
+  - `.gouv.fr` domains excluded (not French startups)
   - Company lookups run in parallel (`Promise.allSettled`) — one failure does not block others
   - Returns merged, deduplicated list
 
 - [x] `src/lib/pipeline/steps/qualify.ts`
   - Signature: `qualify({ companies, criteria, scraper, llm }: Options): Promise<Result<QualifiedCompany[]>>`
   - Calls scraper then LLM for each company in parallel (`Promise.allSettled`)
+  - `looksLikeErrorPage()` detects 404/error pages in first 400 chars — skips to next path instead of stopping
   - **Error level 3**: if one company fails scraping, skip it and continue
 
 - [x] `src/lib/pipeline/steps/enrich.ts`
@@ -225,6 +230,7 @@ Input and output types come from `src/types/index.ts`.
   - **Error level 1**: if primary provider fails, try backup automatically
   - **Error level 2**: if all providers for a step fail, log and continue with what we have
   - **Never crash the whole pipeline for a partial error**
+  - `config.maxResults` is injected into `SearchCriteria` after LLM extraction (overrides `DEFAULT_MAX_RESULTS = 20`)
   - Write results to DB: `companies` (deduplicated by domain), `search_companies`, `contacts`, `data_sources`
   - Company deduplication: check if `domain` exists, update `last_scraped_at` if yes, insert if no
   - Update `searches.status = 'completed'` at the end

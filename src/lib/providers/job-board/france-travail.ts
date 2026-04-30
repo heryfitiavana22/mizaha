@@ -90,20 +90,22 @@ async function fetchOffres({
   criteria: JobSearchCriteria;
   token: string;
 }): Promise<FranceTravailOffre[]> {
-  const params = new URLSearchParams({
-    range: `0-${(criteria.limit ?? DEFAULT_LIMIT) - 1}`,
-  });
+  const params = new URLSearchParams();
 
   if (criteria.keywords?.length)
     params.set("motsCles", criteria.keywords.join(" "));
-  if (criteria.location) params.set("commune", criteria.location);
+  // commune expects a 5-digit INSEE code — ignore free-text locations like "France"
+  if (criteria.location && /^\d{5}$/.test(criteria.location))
+    params.set("commune", criteria.location);
   if (criteria.contractType && CONTRACT_TYPE_MAP[criteria.contractType])
     params.set("typeContrat", CONTRACT_TYPE_MAP[criteria.contractType]);
 
+  const rangeEnd = (criteria.limit ?? DEFAULT_LIMIT) - 1;
   const response = await fetch(`${API_BASE_URL}/offres/search?${params}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",
+      Range: `0-${rangeEnd}`,
     },
   });
 

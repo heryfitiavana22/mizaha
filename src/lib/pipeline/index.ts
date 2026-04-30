@@ -44,6 +44,7 @@ type ExecutePipelineOptions = {
   rawQuery: string;
   providers: UseCaseProviders;
   uiCriteria?: Record<string, unknown>;
+  maxResults?: number;
 };
 
 function toError(error: unknown): Error {
@@ -642,6 +643,7 @@ async function executePipeline({
   rawQuery,
   providers,
   uiCriteria,
+  maxResults,
 }: ExecutePipelineOptions): Promise<void> {
   // Step 1 — blocking: no criteria = no pipeline
   const criteriaResult = await runExtractCriteria({
@@ -660,9 +662,13 @@ async function executePipeline({
     return;
   }
 
+  const criteria: SearchCriteria = maxResults
+    ? { ...criteriaResult.data, maxResults }
+    : criteriaResult.data;
+
   const persistResult = await persistCriteria({
     searchId,
-    criteria: criteriaResult.data,
+    criteria,
   });
   if (!persistResult.success)
     logger.error(
@@ -672,7 +678,7 @@ async function executePipeline({
 
   const results = await runSteps({
     searchId,
-    criteria: criteriaResult.data,
+    criteria,
     providers,
   });
 
@@ -725,6 +731,7 @@ export async function runPipeline({
       rawQuery: searchResult.data.rawQuery,
       providers: config.providers,
       uiCriteria: searchResult.data.uiCriteria,
+      maxResults: config.maxResults,
     });
   } catch (caughtError) {
     const pipelineError = toError(caughtError);

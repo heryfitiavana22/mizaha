@@ -219,19 +219,22 @@ type QualificationResult = {
 
 **France Travail** (ex-Pôle Emploi) is the official French government job API. Free, no rate limit documented for reasonable use. Returns all French job postings including company name.
 
-**WTTJ** (Welcome to the Jungle) has no free public API. We scrape their search results pages via Firecrawl. Each scrape costs Firecrawl credits.
+**WTTJ** (Welcome to the Jungle) exposes a public Algolia index (`wk_cms_organizations_production`) via client-side keys embedded in their page HTML. We query it directly over HTTP — no scraping, no Playwright, no LLM, no Firecrawl credits. The query filters `offices.country_code:FR AND jobs_count > 0` and returns company name + slug. The WTTJ company page URL is constructed from the slug. Keys: `ALGOLIA_APP_ID = "CSEKHVMS53"`, `ALGOLIA_API_KEY = "4bd8f6215d0cc52b26430765769e65a0"`.
 
 ---
 
 ### Company (French official data)
 
-| Provider       | File                 | Free tier       | Status     |
-| -------------- | -------------------- | --------------- | ---------- |
-| Pappers        | `company/pappers.ts` | 100 req/month   | Active MVP |
-| SIRENE / INSEE | `company/sirene.ts`  | Completely free | Active MVP |
+| Provider       | File                 | Free tier       | Status                                     |
+| -------------- | -------------------- | --------------- | ------------------------------------------ |
+| SIRENE / INSEE | `company/sirene.ts`  | Completely free | Active — `search()` and `findByName()`     |
+| Pappers        | `company/pappers.ts` | 100 req/month   | Credits exhausted — kept as backup adapter |
 
-**SIRENE** is the official French registry — complete legal data, free, unlimited.
-**Pappers** enriches with additional data (executives, accounts, website). Used for `findByName()` and `findByDomain()`.
+**SIRENE** is the official French registry — complete legal data, free, unlimited. Used for `search()` (pappers_search signal) and as fallback `findByName()` in the enrich step (job_offer mode).
+
+**Pappers** is disabled in all use case configs (account broken). The adapter is kept in `company/pappers.ts` but not instantiated anywhere. Do not re-enable without verifying the account.
+
+**Domain resolution from company names** — neither SIRENE nor Pappers provide reliable web domains. For the discover step, company names coming from France Travail / WTTJ are resolved to real domains via **Brave Search** (`"Acme SAS" site officiel` → first non-aggregator result). See `discover.ts: resolveDomainForName()`.
 
 Both are **France only**. For international, new adapters will be added.
 
@@ -246,11 +249,12 @@ Both are **France only**. For international, new adapters will be added.
 
 **Firecrawl** is used for:
 
-- Scraping company websites in qualify step (priority pages: /jobs, /recrutement, /team)
-- Scraping WTTJ search result pages in discover step
+- Scraping company websites in qualify step (priority pages: /jobs, /recrutement, /team, /about, homepage)
 - Scraping company contact pages in enrich step
 
-**Credit cost awareness**: each Firecrawl scrape costs 1 credit. With 500 credits total, budget carefully. `scrapedContent` is passed from qualify → enrich to avoid double scraping.
+WTTJ **no longer uses Firecrawl** — it queries the Algolia API directly.
+
+**Credit cost awareness**: each Firecrawl scrape costs 1 credit. With 500 credits total, budget carefully. `scrapedContent` is passed from qualify → enrich to avoid double scraping. The scraper skips pages that look like 404/error pages (detected by keywords in the first 400 chars) and tries the next path.
 
 ---
 
@@ -285,15 +289,15 @@ Switching model = changing the model argument in the use case config, not the ad
 
 ## Free Tier Summary for MVP
 
-| Provider       | Free limit             | Risk                    |
-| -------------- | ---------------------- | ----------------------- |
-| France Travail | Unlimited              | None                    |
-| SIRENE         | Unlimited              | None                    |
-| Brave Search   | 2,000 req/month        | Low (secondary role)    |
-| Pappers        | 100 req/month          | Medium                  |
-| Firecrawl      | 500 credits one-time   | High — budget carefully |
-| WTTJ scraping  | Uses Firecrawl credits | Medium                  |
-| Apollo.io      | ~10,000 credits/month  | Low                     |
+| Provider       | Free limit            | Risk                                             |
+| -------------- | --------------------- | ------------------------------------------------ |
+| France Travail | Unlimited             | None                                             |
+| SIRENE         | 7 req/s               | Medium — batch calls, don't fire 30 in parallel  |
+| Brave Search   | 2,000 req/month       | Medium — now also used for domain resolution     |
+| Pappers        | Disabled              | High — account broken, adapter kept but not used |
+| Firecrawl      | 500 credits one-time  | High — budget carefully                          |
+| WTTJ Algolia   | Free (public keys)    | None — no scraping, direct HTTP to Algolia       |
+| Apollo.io      | ~10,000 credits/month | Low                                              |
 
 **Key constraint**: Firecrawl credits. Each company qualification costs 1 credit (scrape). Each WTTJ page costs 1 credit. Plan accordingly.
 

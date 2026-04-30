@@ -147,12 +147,32 @@ export async function GET(
     return Response.json({ error: "Database unavailable" }, { status: 503 });
   }
 
-  const results = searchResultsResult.data.map((row) => ({
-    ...row,
-    contacts: contactsResult.data.filter(
-      (contact) => contact.entityId === row.entityId,
-    ),
-  }));
+  const results = searchResultsResult.data.map((row) => {
+    const entityData = (row.data ?? {}) as Record<string, unknown>;
+    const rawContacts = contactsResult.data.filter(
+      (c) => c.entityId === row.entityId,
+    );
+    return {
+      companyId: row.entityId,
+      name: (entityData.name as string) ?? "",
+      domain: (entityData.domain as string) ?? "",
+      sector: (entityData.sector as string) || null,
+      location: (entityData.location as string) || null,
+      employeeCount: (entityData.employeeCount as number) ?? null,
+      techStack: Array.isArray(entityData.techStack)
+        ? entityData.techStack
+        : [],
+      relevanceScore: row.score,
+      relevanceReason: row.reason,
+      contacts: rawContacts.map((c) => ({
+        id: c.id,
+        name: c.name ?? "",
+        title: c.title ?? null,
+        email: c.email ?? null,
+        linkedinUrl: c.linkedinUrl ?? null,
+      })),
+    };
+  });
 
   return Response.json({
     search: searchResult.data,

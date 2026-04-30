@@ -1,33 +1,25 @@
-import { ProviderBadges } from "@/components/pipeline/provider-badges";
-import { ExtractCriteriaOutput } from "./extract-criteria-output";
-
-type DiscoverInputData = {
-  providers?: {
-    search: string;
-    searchBackup: string | null;
-    company: string;
-    companyBackup: string | null;
-  };
-};
+import { Pills } from "@/components/pipeline/pills";
 
 export function DiscoverInput({ data }: { data: Record<string, unknown> }) {
-  const input = data as DiscoverInputData;
+  const signalSources = Array.isArray(data.signalSources)
+    ? (data.signalSources as string[])
+    : [];
+  const targetEntity =
+    typeof data.targetEntity === "string" ? data.targetEntity : null;
+
   return (
     <div className="flex flex-col gap-1.5">
-      <ExtractCriteriaOutput data={data} />
-      {input.providers && (
-        <ProviderBadges
-          slots={[
-            {
-              primary: input.providers.search,
-              backup: input.providers.searchBackup ?? undefined,
-            },
-            {
-              primary: input.providers.company,
-              backup: input.providers.companyBackup ?? undefined,
-            },
-          ]}
-        />
+      {targetEntity && (
+        <span className="text-xs text-muted-foreground">
+          Cible :{" "}
+          <span className="font-medium text-foreground">{targetEntity}</span>
+        </span>
+      )}
+      {signalSources.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Sources</span>
+          <Pills items={signalSources} />
+        </div>
       )}
     </div>
   );

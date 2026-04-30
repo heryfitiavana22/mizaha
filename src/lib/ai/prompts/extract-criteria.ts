@@ -30,7 +30,7 @@ export const searchCriteriaSchema = z.object({
     .nullable()
     .transform((v) => v ?? undefined)
     .describe(
-      "City or region in France (e.g. Paris, Lyon, Île-de-France). null if not mentioned.",
+      "Specific city or region in France (e.g. Paris, Lyon, Île-de-France). null if not mentioned or if the user means all of France ('françaises', 'en France', 'France' without a specific city).",
     ),
 
   techStack: z
@@ -148,11 +148,11 @@ targetEntity:
 - Set to "job_offer" when the user is looking for a job, mission, or CDI for themselves.
 
 signalSources — include only what the query implies:
-- "france_travail": query mentions hiring, "recrutent", "ont un poste ouvert", or any signal that a company has an open position.
-- "wttj": query mentions startups, tech companies, or tech stack — WTTJ specializes in tech startup jobs.
+- "france_travail": query implies a company is hiring — "recrutent", "ont un poste ouvert", "ont besoin d'un dev", "cherchent un développeur", or any phrasing suggesting an open position.
+- "wttj": query mentions startups, tech companies, or tech stack — WTTJ specializes in tech startup jobs. Include alongside "france_travail" when both apply.
 - "pappers_search": query mentions sector, size, location, or legal form — Pappers enables structured company lookup.
 - "brave": query mentions funding ("levée de fonds"), recent news, or signals with no dedicated API.
-- Always include at least one source. Include multiple when the query has several signal types.
+- Always include at least one source. Include multiple when the query has several signal types. For "company" targetEntity with hiring signals, include BOTH "france_travail" AND "wttj" by default.
 
 searchStrategies (only for targetEntity = "company"):
 - 3 to 5 Brave queries targeting company-side pages — their blog, press coverage, funding news, career page.
@@ -160,10 +160,11 @@ searchStrategies (only for targetEntity = "company"):
 - One quoted phrase per query maximum.
 
 qualificationCriteria:
-- 2 to 4 criteria written in French as affirmations to verify on the entity.
+- 3 to 5 criteria written in French as affirmations to verify on the entity.
 - For companies: verifiable from the company website content.
 - For job offers: verifiable from the job posting content.
 - Be specific and observable — not vague assessments.
+- Always include this negative criterion when targetEntity is "company": "L'entreprise n'est pas un cabinet de recrutement, une ESN, une agence d'intérim, ni un prestataire RH".
 
 Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
 }

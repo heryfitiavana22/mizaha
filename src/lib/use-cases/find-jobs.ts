@@ -1,5 +1,4 @@
 import { openai } from "@ai-sdk/openai";
-import { PappersCompanyProvider } from "@/lib/providers/company/pappers";
 import { SireneCompanyProvider } from "@/lib/providers/company/sirene";
 import { FirecrawlEmailProvider } from "@/lib/providers/email/firecrawl";
 import { FranceTravailProvider } from "@/lib/providers/job-board/france-travail";
@@ -24,7 +23,6 @@ export const findJobsConfig: UseCaseConfig = {
     },
     company: {
       primary: new SireneCompanyProvider(),
-      backup: new PappersCompanyProvider(),
     },
     scraper: {
       primary: new FirecrawlScraperProvider(),

@@ -14,6 +14,42 @@ import type {
 
 const SEARCH_LIMIT_PER_QUERY = 10;
 const DEFAULT_MAX_RESULTS = 20;
+const RESOLVE_BATCH_SIZE = 5;
+
+const KNOWN_AGGREGATOR_DOMAINS = new Set([
+  "linkedin.com",
+  "indeed.fr",
+  "indeed.com",
+  "welcometothejungle.com",
+  "glassdoor.fr",
+  "glassdoor.com",
+  "monster.fr",
+  "monster.com",
+  "cadremploi.fr",
+  "hellowork.com",
+  "pole-emploi.fr",
+  "francetravail.fr",
+  "apec.fr",
+  "facebook.com",
+  "twitter.com",
+  "instagram.com",
+  "youtube.com",
+  "wikipedia.org",
+  "societe.com",
+  "verif.com",
+  "pappers.fr",
+  "infogreffe.fr",
+  "apple.com",
+  "apps.apple.com",
+  "play.google.com",
+  "lefigaro.fr",
+  "lemonde.fr",
+  "lesechos.fr",
+  "pagesjaunes.fr",
+  "theorg.com",
+  "crunchbase.com",
+  "societeinfo.com",
+]);
 
 export type DiscoverOptions = {
   criteria: SearchCriteria;
@@ -113,35 +149,94 @@ async function runBraveSource({
   return extracted.data;
 }
 
+const DEV_SUBDOMAINS =
+  /^(dev|staging|preprod|test|sandbox|app|api|admin|beta|demo|preview)\./;
+
+function extractDomainFromUrl(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname
+      .replace(/^www\./, "")
+      .replace(DEV_SUBDOMAINS, "");
+    if (KNOWN_AGGREGATOR_DOMAINS.has(hostname)) return null;
+    // Subdomain match (en.wikipedia.org → wikipedia.org)
+    for (const agg of KNOWN_AGGREGATOR_DOMAINS) {
+      if (hostname.endsWith(`.${agg}`)) return null;
+    }
+    // Government sites are not French startups
+    if (hostname.endsWith(".gouv.fr") || hostname === "gouv.fr") return null;
+    return hostname;
+  } catch {
+    return null;
+  }
+}
+
+function nameMatchesResult(
+  name: string,
+  item: { title: string; snippet: string },
+): boolean {
+  // Require at least one significant word from the company name to appear in title or snippet
+  const words = name
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 3); // skip short words like "SAS", "FMS", "AK"
+  if (words.length === 0) return true; // very short name — can't validate, accept
+  const haystack = `${item.title} ${item.snippet}`.toLowerCase();
+  return words.some((w) => haystack.includes(w));
+}
+
+async function resolveDomainForName({
+  name,
+  search,
+}: {
+  name: string;
+  search: SearchProvider;
+}): Promise<string | null> {
+  const result = await search.search({
+    query: `"${name}" site officiel`,
+    options: { limit: 5 },
+  });
+  if (!result.success) return null;
+  for (const item of result.data) {
+    const domain = extractDomainFromUrl(item.url);
+    if (domain && nameMatchesResult(name, item)) return domain;
+  }
+  return null;
+}
+
+async function batchedMap<T, R>(
+  items: T[],
+  batchSize: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 async function resolveNamesToCompanies({
   namedSources,
-  company,
+  search,
 }: {
   namedSources: NamedSource[];
-  company: CompanyProvider;
+  search: SearchProvider;
 }): Promise<CompanyData[]> {
   const uniqueByName = [
     ...new Map(namedSources.map((ns) => [ns.name, ns])).values(),
   ];
-  const settlements = await Promise.allSettled(
-    uniqueByName.map(({ name, source }) =>
-      company.findByName(name).then((result) => ({ result, source })),
-    ),
+  const resolved = await batchedMap<NamedSource, CompanyData | null>(
+    uniqueByName,
+    RESOLVE_BATCH_SIZE,
+    async ({ name, source }) => {
+      const domain = await resolveDomainForName({ name, search });
+      if (!domain) return null;
+      return { name, domain, sector: "", location: "", source };
+    },
   );
-  const companies: CompanyData[] = [];
-  for (const settlement of settlements) {
-    if (
-      settlement.status === "fulfilled" &&
-      settlement.value.result.success &&
-      settlement.value.result.data !== null
-    ) {
-      companies.push({
-        ...settlement.value.result.data,
-        source: settlement.value.source,
-      });
-    }
-  }
-  return companies;
+  return resolved.filter((c): c is CompanyData => c !== null);
 }
 
 function deduplicateByDomain({
@@ -220,18 +315,20 @@ async function collectSignalSources(options: DiscoverOptions): Promise<{
 async function discoverCompanies(
   options: DiscoverOptions,
 ): Promise<Result<CompanyData[]>> {
-  const { criteria, company } = options;
+  const { criteria, search } = options;
 
   const { pappersCompanies, namedSources } =
     await collectSignalSources(options);
   const resolvedCompanies = await resolveNamesToCompanies({
     namedSources,
-    company,
+    search,
   });
 
   const maxResults = criteria.maxResults ?? DEFAULT_MAX_RESULTS;
+  // SIRENE returns SIREN numbers (9 digits) as domain — skip them, no real URL
+  const validPappers = pappersCompanies.filter((c) => !/^\d+$/.test(c.domain));
   const deduplicated = deduplicateByDomain({
-    companies: [...pappersCompanies, ...resolvedCompanies],
+    companies: [...validPappers, ...resolvedCompanies],
   }).slice(0, maxResults);
 
   logger.info({ count: deduplicated.length }, "discover: companies collected");

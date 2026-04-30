@@ -235,7 +235,7 @@
 
 Run these checks before calling the refactor done:
 
-- [ ] Use Case 1: `"Je cherche des startups françaises qui ont besoin d'un dev React"`
+- [x] Use Case 1: `"Je cherche des startups françaises qui ont besoin d'un dev React"`
   - discover must activate France Travail + WTTJ
   - Results must be real company domains (NOT linkedin.com, indeed.fr, welcometothejungle.com)
   - At least 5 results with score ≥ 0.5 and a contact email each

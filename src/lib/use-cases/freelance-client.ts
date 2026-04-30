@@ -1,5 +1,4 @@
 import { openai } from "@ai-sdk/openai";
-import { PappersCompanyProvider } from "@/lib/providers/company/pappers";
 import { SireneCompanyProvider } from "@/lib/providers/company/sirene";
 import { FirecrawlEmailProvider } from "@/lib/providers/email/firecrawl";
 import { FranceTravailProvider } from "@/lib/providers/job-board/france-travail";
@@ -16,15 +15,13 @@ export const freelanceClientConfig: UseCaseConfig = {
   description: "Freelance developer looking for client missions in France",
   targetEntity: "company",
   enrichStrategy: "domain",
-  maxResults: 20,
+  maxResults: 30,
   providers: {
     search: {
       primary: new BraveSearchProvider(),
     },
     company: {
       primary: new SireneCompanyProvider(),
-      // BROKEN: always 401 in free
-      backup: new PappersCompanyProvider(),
     },
     scraper: {
       primary: new FirecrawlScraperProvider(),
@@ -36,8 +33,8 @@ export const freelanceClientConfig: UseCaseConfig = {
       ),
     },
     jobBoard: {
-      primary: new FranceTravailProvider(),
-      backup: new WttjProvider(),
+      primary: new WttjProvider(),
+      backup: new FranceTravailProvider(),
     },
     llm: new VercelLLMProvider(openai(OPENAI_MODEL_ID), OPENAI_MODEL_ID),
   },
