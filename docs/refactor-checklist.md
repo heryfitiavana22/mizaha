@@ -97,22 +97,22 @@
 
 ## Phase 3 — Provider Adapters
 
-- [ ] **ADD** `src/lib/providers/job-board/france-travail.ts`
+- [x] **ADD** `src/lib/providers/job-board/france-travail.ts`
   - Implements `JobBoardProvider`
   - Calls France Travail API (verify auth in Phase 0 of original checklist)
   - Returns `JobPosting[]` with company names
 
-- [ ] **ADD** `src/lib/providers/job-board/wttj.ts`
+- [x] **ADD** `src/lib/providers/job-board/wttj.ts`
   - Implements `JobBoardProvider`
   - Scrapes WTTJ search result pages via Firecrawl
   - Parses HTML to extract job listings + company names
   - Costs Firecrawl credits — log every scrape
 
-- [ ] **UPDATE** `src/lib/providers/company/pappers.ts`
+- [x] **UPDATE** `src/lib/providers/company/pappers.ts`
   - Add `findByName(name: string)` implementation
   - This method is now called in discover to resolve company name → official domain
 
-- [ ] **UPDATE** `src/lib/providers/llm/vercel.ts`
+- [x] **UPDATE** `src/lib/providers/llm/vercel.ts`
   - Add `extractCompanyNames()` method — uses `buildExtractCompanyNamesPrompt`
   - Update `qualify()` — pass both `entity` and `scrapedContent` correctly (bug fix: scrapedContent was being ignored)
   - Update `extractCriteria()` — output must include `targetEntity`, `signalSources`, `searchStrategies`, `qualificationCriteria`
