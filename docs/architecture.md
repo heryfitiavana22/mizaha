@@ -6,30 +6,92 @@
 User types in natural language
   ↓
 [Step 1 — Interactive Chat]
-  Model responds in inline mode: text + JSONL patches (via pipeJsonRender)
-  json-render renders interactive components (Select, Checkbox, Slider…)
-  All renderers share a single StateStore — selections accumulate across messages
-  Each new user message appends current selections as "key: value" lines
-  User clicks "Lancer la recherche" → uiCriteria snapshot sent to pipeline
+  Claude extracts SearchCriteria:
+    - searchStrategies (Brave queries for "news/funding" signals)
+    - signalSources (which specialized sources to query)
+    - qualificationCriteria (what to verify per entity)
+    - targetEntity: "company" | "job_offer"
+  json-render generates interactive components (checkboxes, sliders, etc.)
+  User refines criteria visually
   ↓
 [Step 2 — discover]
-  Brave Search → list of company URLs
-  Pappers / SIRENE → official French company data
+  Multi-source, signal-aware (see section below)
+  Output: list of companies OR list of job offers (depends on targetEntity)
   ↓
 [Step 3 — qualify]
-  Firecrawl scrapes each site
-  Claude analyzes and assigns a relevance score + explanation
+  For companies: Firecrawl scrapes site → Claude scores vs qualificationCriteria
+  For job offers: Claude scores the posting content directly (no scraping needed)
+  Threshold: score ≥ 0.5 to pass
+  scrapedContent is passed to enrich to avoid double scraping
   ↓
 [Step 4 — enrich]
-  Brave Search + Firecrawl → contact emails extracted from company pages
+  For companies: extract contact from already-scraped content (Firecrawl /team page fallback)
+  For job offers: add company data from Pappers/SIRENE
   ↓
-Results stored in database (companies, search_companies, contacts)
+Results stored in database
   ↓
 [Dynamic display]
-  json-render adapts the layout based on the search context
+  json-render adapts the layout based on targetEntity and search context
 ```
 
-Each step is traced in `pipeline_runs` (step, status, duration, error if any, input_data, output_data).
+Each step is traced in `pipeline_runs` (step, status, duration_ms, error if any).
+
+---
+
+## Discover Step — Multi-Source Architecture
+
+This is the core of the pipeline. The discover step is **signal-aware**: it uses the right source for each type of signal. Sources run in parallel and converge into a deduplicated entity list.
+
+### Signal → Source mapping
+
+| Signal type                | Primary source              | How                                                         |
+| -------------------------- | --------------------------- | ----------------------------------------------------------- |
+| "hiring dev"               | France Travail API          | Free official API → job postings → extract company name     |
+| "tech jobs"                | WTTJ scraping via Firecrawl | Scrape search results pages → extract company names         |
+| "sector + location + size" | Pappers `search()` / SIRENE | Direct structured query → returns companies with domains    |
+| "funding / news"           | Brave targeted queries      | LLM extracts company names from results → domain resolution |
+
+### Flow for "find companies" (targetEntity = "company")
+
+```text
+signalSources (from SearchCriteria)
+  ↓
+Run in parallel:
+  France Travail API → job postings → company names
+  WTTJ scraping → job postings → company names
+  Pappers search() → company data with domains
+  Brave queries → LLM extracts company names → domain resolution
+
+Converge → all company names
+  ↓
+For each company name without domain:
+  Pappers findByName() → official domain + company data
+  ↓
+Deduplicate by domain
+  ↓
+CompanyData[]
+```
+
+### Flow for "find job offers" (targetEntity = "job_offer")
+
+```text
+France Travail API → job postings matching criteria
+WTTJ scraping → job postings matching criteria
+  ↓
+Qualify each posting (Claude scores directly — no scraping needed)
+  ↓
+Enrich: add company data from Pappers/SIRENE
+  ↓
+JobOffer[]
+```
+
+### Role of Brave in the new architecture
+
+Brave is **not the primary discovery source**. It is used only for:
+
+- "news/funding" signals where no specialized API exists
+- Targeted queries on known company names (not generic discovery)
+- The LLM generates these queries in `searchStrategies` to target company pages, not job boards
 
 ---
 
@@ -48,17 +110,19 @@ src/lib/ui-generative/
 
 **Chat catalog** — components for refining criteria:
 
-- Checkboxes (sector, signals)
-- Slider (company size, funding amount)
+- Checkboxes (sector, signals, contract type)
+- Slider (company size, funding amount, salary range)
 - Location selector
 - Tech stack selector
+- Target entity selector (company / job offer)
 
-**Results catalog** — components for displaying companies:
+**Results catalog** — components for displaying results:
 
-- Standard company card
+- Company card (for company use cases)
+- Job offer card (for job search use cases)
 - Funding timeline
-- Tech stack badge
-- Visual relevance score
+- Tech stack badges
+- Relevance score visual
 
 ### Rule
 
@@ -79,7 +143,8 @@ src/lib/providers/interfaces/
 ├── company.ts     → CompanyProvider
 ├── scraper.ts     → ScraperProvider
 ├── email.ts       → EmailProvider
-└── llm.ts         → LLMProvider
+├── llm.ts         → LLMProvider
+└── job-board.ts   → JobBoardProvider  ← NEW
 ```
 
 ### Implementations
@@ -87,19 +152,21 @@ src/lib/providers/interfaces/
 ```text
 src/lib/providers/
 ├── search/
-│   ├── brave.ts       → implements SearchProvider
-│   └── serp.ts        → implements SearchProvider (backup)
+│   ├── brave.ts           → implements SearchProvider
+│   └── serp.ts            → implements SearchProvider (backup)
 ├── company/
-│   ├── pappers.ts     → implements CompanyProvider
-│   └── sirene.ts      → implements CompanyProvider
+│   ├── pappers.ts         → implements CompanyProvider
+│   └── sirene.ts          → implements CompanyProvider
 ├── scraper/
-│   └── firecrawl.ts   → implements ScraperProvider
+│   ├── firecrawl.ts       → implements ScraperProvider
+│   └── playwright.ts      → implements ScraperProvider (backup)
 ├── email/
-│   ├── firecrawl.ts   → implements EmailProvider (composite: Brave + Firecrawl)
-│   ├── apollo.ts      → implements EmailProvider (available alternative)
-│   └── hunter.ts      → implements EmailProvider (reference — requires paid plan)
+│   └── firecrawl.ts       → implements EmailProvider (scrapes /team, /contact pages)
+├── job-board/
+│   ├── france-travail.ts  → implements JobBoardProvider (free official API)
+│   └── wttj.ts            → implements JobBoardProvider (Firecrawl scraping)
 └── llm/
-    └── vercel.ts      → implements LLMProvider — model injected at runtime
+    └── vercel.ts          → implements LLMProvider — model injected at runtime
 ```
 
 ### Absolute Rule
@@ -108,13 +175,13 @@ Always import the interface, never the implementation directly.
 
 ```typescript
 // CORRECT
-import type { SearchProvider } from "@/lib/providers/interfaces/search";
+import type { JobBoardProvider } from "@/lib/providers/interfaces/job-board";
 
 // FORBIDDEN
-import { BraveSearchProvider } from "@/lib/providers/search/brave";
+import { FranceTravailProvider } from "@/lib/providers/job-board/france-travail";
 ```
 
-The choice of implementation is made in a single configuration file, not in business logic.
+The choice of implementation is made in the use case config, not in business logic.
 
 ---
 
@@ -125,20 +192,20 @@ Each step is independent and can be tested, replaced, or reordered without touch
 ```text
 src/lib/pipeline/
 ├── steps/
-│   ├── extract-criteria.ts   → receives rawQuery + optional uiCriteria, returns SearchCriteria (JSON)
-│   ├── discover.ts           → receives SearchCriteria, returns CompanyData[]
-│   ├── qualify.ts            → receives CompanyData[], returns QualifiedCompany[]
-│   └── enrich.ts             → receives QualifiedCompany[], returns EnrichedCompany[]
+│   ├── extract-criteria.ts   → rawQuery + uiCriteria → SearchCriteria (with targetEntity)
+│   ├── discover.ts           → SearchCriteria → CompanyData[] OR JobOffer[]
+│   ├── qualify.ts            → entities[] → QualifiedEntity[]  (score ≥ 0.5)
+│   └── enrich.ts             → QualifiedEntity[] → EnrichedEntity[]
 └── index.ts                  → orchestrator — step order + pipeline_runs
 ```
 
-`uiCriteria` (explicit selections from the chat UI) is flattened by `extract-criteria.ts` before reaching the LLM (nested keys like `{"search": {"location": "X"}}` are collapsed to `{"location": "X"}`). The LLM produces `SearchCriteria` including `searchStrategies` (ready-to-run Brave queries) and `qualificationCriteria` (what to verify on each company site).
+`extract-criteria.ts` generates `SearchCriteria` including `searchStrategies` (ready-to-run Brave queries), `signalSources` (which specialized providers to activate), `qualificationCriteria` (what to verify per entity), and `targetEntity`.
 
-`discover.ts` launches all `searchStrategies` in parallel (limit=10 each), then calls the LLM to extract real company names from all search results at once (titles + URLs + snippets). This handles both direct company pages and job board postings (e.g. "Devoteam looking for a dev" → extracts "Devoteam"). For each extracted name, a targeted Brave search resolves the real company domain. Finally, Pappers/SIRENE fetches official metadata per domain. This approach requires no hardcoded noise-domain list — the LLM filters aggregators and directories naturally.
+`discover.ts` activates the providers listed in `signalSources`, runs them in parallel, extracts entity names/domains, deduplicates, and enriches with Pappers/SIRENE for companies.
 
-`qualify.ts` tries priority pages first (`/jobs`, `/recrutement`, `/careers`, etc.) before the homepage, then passes scraped content + `qualificationCriteria` to the LLM. The result carries `scrapedContent` to avoid re-scraping in the enrich step. Companies scoring below **0.5** are filtered out.
+`qualify.ts` tries priority pages first for companies (`/jobs`, `/recrutement`, `/careers`, homepage) before scoring. Passes `scrapedContent` to enrich to avoid re-scraping.
 
-`enrich.ts` reuses `scrapedContent` from `qualify` if available (zero additional Firecrawl credits). Falls back to the email provider only if no emails were found in the already-scraped content.
+`enrich.ts` reuses `scrapedContent` from qualify (zero additional Firecrawl credits for companies). Adds company data for job offer results.
 
 `index.ts` is the only place that knows the step order and traces execution.
 
@@ -150,16 +217,18 @@ Each use case is a configuration, not different code.
 
 ```text
 src/lib/use-cases/
-├── freelance.ts   → providers, enrichStrategy, maxResults
-├── agency.ts      → (future)
-└── index.ts       → registry, getUseCase() returns Result<UseCaseConfig>
+├── freelance-client.ts   → find companies to prospect (MVP)
+├── find-jobs.ts          → find job offers / missions
+├── agency.ts             → (future)
+└── index.ts              → registry, getUseCase() returns Result<UseCaseConfig>
 ```
 
 `UseCaseConfig` fields:
 
-- `providers` — which adapters to use
-- `enrichStrategy: "domain" | "persona"` — `"domain"` finds any email on the site; `"persona"` targets a specific role (Use Case 3)
-- `maxResults` — default company count for this use case (overridable per search via `SearchCriteria.maxResults`)
+- `providers` — which adapters to activate (including job-board providers)
+- `targetEntity: "company" | "job_offer"` — what the pipeline searches for
+- `enrichStrategy: "domain" | "persona"` — `"domain"` finds any email on the site; `"persona"` targets a specific role
+- `maxResults` — default entity count (overridable per search via `SearchCriteria.maxResults`)
 
 The pipeline receives the use case config and adapts. That's all.
 
@@ -174,15 +243,17 @@ Automatically switch to backup without interrupting the pipeline.
 
 ```text
 Brave Search fails → SerpAPI takes over
+France Travail unavailable → WTTJ only
+Firecrawl fails → Playwright takes over
 ```
 
 **Level 2 — All providers for a step fail**
 Log the error in `pipeline_runs` (step, error, status: failed).
 Continue the pipeline with what we already have — no total crash.
 
-**Level 3 — A company fails at scraping**
-Skip it and continue with the other companies.
-It is marked in `data_sources` with the error message.
+**Level 3 — One entity fails at scraping/qualification**
+Skip it and continue with the other entities.
+Marked in `data_sources` with the error message.
 
 ### Absolute Rules
 
@@ -195,7 +266,7 @@ A pipeline that returns 8 results out of 10 is better than a pipeline that crash
 
 ```text
 POST /api/pipeline { rawQuery, useCaseName, uiCriteria? }
-  → creates a search in database (status: pending, criteria: uiCriteria)
+  → creates a search in database (status: pending)
   → triggers the pipeline in the background
   → returns search_id immediately
 

@@ -59,8 +59,7 @@
 │   │   │   │   ├── hunter.ts         # → implements EmailProvider
 │   │   │   │   └── apollo.ts         # → implements EmailProvider (backup)
 │   │   │   └── llm/
-│   │   │       ├── claude.ts         # → implements LLMProvider (primary)
-│   │   │       └── openai.ts         # → implements LLMProvider (backup)
+│   │   │       └── vercel.ts         # → implements LLMProvider — model injected at runtime
 │   │   │
 │   │   ├── pipeline/
 │   │   │   ├── steps/
@@ -161,7 +160,7 @@ or does it belong to a specific layer? Decide case by case while coding.
 DATABASE_URL=postgresql://postgres:password@localhost:5432/mizaha
 
 # LLM
-ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
 
 # Search
 BRAVE_SEARCH_API_KEY=

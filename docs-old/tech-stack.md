@@ -39,16 +39,18 @@ The AI adapts the results layout based on the search context. Search by region â
 
 ## Artificial Intelligence
 
-| Tool                   | Role     | Reason                                                   |
-| ---------------------- | -------- | -------------------------------------------------------- |
-| Claude API (Anthropic) | Main LLM | Best for understanding complex natural language criteria |
+| Tool                  | Role     |
+| --------------------- | -------- |
+| OpenAI (gpt-5.4-mini) | Main LLM |
 
-Claude is used for:
+The LLM is used for:
 
 - Extracting structured criteria from natural language
 - Qualifying and scoring each found company
-- Explaining why a company matches
+- Explaining why a company matches (in French)
 - Generating a contact message draft
+
+The model is injected at runtime via `VercelLLMProvider` â€” switching to another model (Claude, Gemini, etc.) means changing one line in `src/lib/use-cases/freelance.ts`.
 
 ---
 
@@ -143,11 +145,11 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
-    ANTHROPIC_API_KEY: z.string().min(1),
+    OPENAI_API_KEY: z.string().min(1),
     BRAVE_SEARCH_API_KEY: z.string().min(1),
     PAPPERS_API_KEY: z.string().min(1),
     FIRECRAWL_API_KEY: z.string().min(1),
-    HUNTER_API_KEY: z.string().min(1),
+    HUNTER_API_KEY: z.string().optional(),
     APOLLO_API_KEY: z.string().optional(),
     SERP_API_KEY: z.string().optional(),
   },

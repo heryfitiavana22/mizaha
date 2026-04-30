@@ -8,39 +8,37 @@ The rest of the code doesn't know which provider is being used.
 
 ---
 
-## The 5 Interfaces
+## The 6 Interfaces
 
 ### `SearchProvider`
 
-Company discovery via web search.
-Types live in `src/lib/providers/interfaces/search.ts`.
+Web search — used for "news/funding" signals and targeted company-name queries.
+Not used for primary company discovery.
 
 ```typescript
-// SearchOptions, SearchInput — in interfaces/search.ts
-// SearchResult — in src/types/index.ts (used across pipeline)
-
 interface SearchProvider {
   readonly name: string;
   search(input: SearchInput): Promise<Result<SearchResult[]>>;
 }
 
-type SearchOptions = { country?: string; limit?: number };
 type SearchInput = { query: string; options?: SearchOptions };
+type SearchOptions = { country?: string; limit?: number };
+
+// SearchResult — in src/types/index.ts
+type SearchResult = { url: string; title: string; snippet: string };
 ```
 
 ---
 
 ### `CompanyProvider`
 
-Official company data (registries, legal databases).
-Types live in `src/lib/providers/interfaces/company.ts`.
+Official company data (French registries).
 
 ```typescript
-// CompanyCriteria — in interfaces/company.ts
-
 interface CompanyProvider {
   readonly name: string;
   findByDomain(domain: string): Promise<Result<CompanyData | null>>;
+  findByName(name: string): Promise<Result<CompanyData | null>>;
   search(criteria: CompanyCriteria): Promise<Result<CompanyData[]>>;
 }
 
@@ -51,7 +49,7 @@ type CompanyCriteria = {
   maxEmployees?: number;
 };
 
-// CompanyData — in src/types/index.ts (used across pipeline)
+// CompanyData — in src/types/index.ts
 type CompanyData = {
   name: string;
   domain: string;
@@ -65,19 +63,52 @@ type CompanyData = {
 
 ---
 
+### `JobBoardProvider`
+
+Job postings from job boards. Primary discovery source for "hiring" signals.
+
+```typescript
+interface JobBoardProvider {
+  readonly name: string;
+  searchJobs(criteria: JobSearchCriteria): Promise<Result<JobPosting[]>>;
+}
+
+type JobSearchCriteria = {
+  keywords?: string[];
+  location?: string;
+  contractType?: "cdi" | "cdd" | "freelance" | "alternance";
+  techStack?: string[];
+  remote?: boolean;
+  limit?: number;
+};
+
+// JobPosting — in src/types/index.ts
+type JobPosting = {
+  title: string;
+  companyName: string;
+  companyDomain?: string; // not always available — lookup via CompanyProvider if missing
+  location: string;
+  contractType: string;
+  techStack?: string[];
+  description: string;
+  url: string;
+  postedAt?: string;
+};
+```
+
+---
+
 ### `ScraperProvider`
 
 Content extraction from a website.
-Types live in `src/lib/providers/interfaces/scraper.ts`.
 
 ```typescript
-// ScrapedContent — in interfaces/scraper.ts
-
 interface ScraperProvider {
   readonly name: string;
   scrape(url: string): Promise<Result<ScrapedContent>>;
 }
 
+// ScrapedContent — in src/types/index.ts
 type ScrapedContent = {
   url: string;
   title: string;
@@ -90,12 +121,10 @@ type ScrapedContent = {
 
 ### `EmailProvider`
 
-Contact and email search by domain.
-Types live in `src/lib/providers/interfaces/email.ts`.
+Contact extraction from a company domain.
+Primary strategy: scrape the company's own team/contact pages via Firecrawl.
 
 ```typescript
-// FindContactInput — in interfaces/email.ts
-
 interface EmailProvider {
   readonly name: string;
   findByDomain(domain: string): Promise<Result<Contact[]>>;
@@ -104,12 +133,12 @@ interface EmailProvider {
 
 type FindContactInput = { name: string; domain: string };
 
-// Contact — in src/types/index.ts (used across pipeline)
+// Contact — in src/types/index.ts
 type Contact = {
   name?: string;
   title?: string;
   email: string;
-  confidence: number; // confidence score 0-100
+  confidence: number; // 0-100
   linkedinUrl?: string;
 };
 ```
@@ -118,15 +147,13 @@ type Contact = {
 
 ### `LLMProvider`
 
-Language model calls.
-Types live in `src/lib/providers/interfaces/llm.ts`.
+Language model calls. Model injected at runtime via use case config — not hardcoded.
 
 ```typescript
-// ExtractCriteriaInput, QualifyInput, GenerateDraftInput — in interfaces/llm.ts
 interface LLMProvider {
   readonly name: string;
   extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
-  extractCompanies(results: SearchResult[]): Promise<Result<string[]>>;
+  extractCompanyNames(results: SearchResult[]): Promise<Result<string[]>>;
   qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
   generateDraft(input: GenerateDraftInput): Promise<Result<string>>;
 }
@@ -134,26 +161,32 @@ interface LLMProvider {
 type ExtractCriteriaInput = {
   rawQuery: string;
   useCase: string;
-  uiCriteria?: Record<string, unknown>; // explicit selections from the chat UI (json-render state)
+  uiCriteria?: Record<string, unknown>;
 };
+
 type QualifyInput = {
-  company: CompanyData;
+  entity: CompanyData | JobPosting;
   criteria: SearchCriteria;
-  scrapedContent: string;
+  scrapedContent: string; // mandatory — we never qualify without content
 };
+
 type GenerateDraftInput = { contact: Contact; companyContext: string };
 
-// SearchCriteria, QualificationResult, CompanyData, Contact — in src/types/index.ts
+// SearchCriteria — in src/types/index.ts
 type SearchCriteria = {
+  targetEntity: "company" | "job_offer";
   sector?: string;
   location?: string;
   techStack?: string[];
   employeeRange?: { min: number; max: number };
-  targetPersona?: string; // e.g.: "CTO", "DRH" — Use Case 3
-  maxResults?: number; // overrides UseCaseConfig.maxResults for this search
-  searchStrategies: string[]; // ready-to-run Brave queries, generated by the LLM
-  qualificationCriteria: string[]; // what to verify on each company site
+  targetPersona?: string; // Use Case 4: "CTO", "DRH"
+  maxResults?: number; // overrides UseCaseConfig.maxResults
+  signalSources: SignalSource[]; // which providers to activate in discover
+  searchStrategies: string[]; // Brave queries (for news/funding signals only)
+  qualificationCriteria: string[]; // what Claude verifies per entity
 };
+
+type SignalSource = "france_travail" | "wttj" | "pappers_search" | "brave";
 
 type QualificationResult = {
   score: number; // 0.0 to 1.0
@@ -166,87 +199,103 @@ type QualificationResult = {
 
 ## Available Providers
 
-### Search (discovery)
+### Search
 
-| Provider     | File              | Free tier       | Status     |
-| ------------ | ----------------- | --------------- | ---------- |
-| Brave Search | `search/brave.ts` | 2,000 req/month | Active MVP |
-| SerpAPI      | `search/serp.ts`  | 100 req/month   | Backup     |
+| Provider     | File              | Free tier       | Status                           |
+| ------------ | ----------------- | --------------- | -------------------------------- |
+| Brave Search | `search/brave.ts` | 2,000 req/month | Secondary — news/funding signals |
+| SerpAPI      | `search/serp.ts`  | 100 req/month   | Backup                           |
 
-**Brave Search** is the primary. Better free tier, independent from Google.
+**Brave is no longer the primary discovery source.** It handles targeted queries for signals that have no dedicated API (news, funding mentions).
 
 ---
 
-### Company (official French data)
+### Job Board (primary discovery for "hiring" signals)
+
+| Provider       | File                          | Free tier                     | Status                               |
+| -------------- | ----------------------------- | ----------------------------- | ------------------------------------ |
+| France Travail | `job-board/france-travail.ts` | Free, unlimited               | Active MVP — official French job API |
+| WTTJ           | `job-board/wttj.ts`           | Free (scraping via Firecrawl) | Active MVP — tech startup jobs       |
+
+**France Travail** (ex-Pôle Emploi) is the official French government job API. Free, no rate limit documented for reasonable use. Returns all French job postings including company name.
+
+**WTTJ** (Welcome to the Jungle) has no free public API. We scrape their search results pages via Firecrawl. Each scrape costs Firecrawl credits.
+
+---
+
+### Company (French official data)
 
 | Provider       | File                 | Free tier       | Status     |
 | -------------- | -------------------- | --------------- | ---------- |
 | Pappers        | `company/pappers.ts` | 100 req/month   | Active MVP |
 | SIRENE / INSEE | `company/sirene.ts`  | Completely free | Active MVP |
 
-**SIRENE** is the official French registry — complete legal data, free.
-**Pappers** enriches with additional data (executives, accounts, etc.).
+**SIRENE** is the official French registry — complete legal data, free, unlimited.
+**Pappers** enriches with additional data (executives, accounts, website). Used for `findByName()` and `findByDomain()`.
 
-Both providers are **France only**. For international, other providers will be added later.
+Both are **France only**. For international, new adapters will be added.
 
 ---
 
-### Scraper (content extraction)
+### Scraper
 
-| Provider   | File                    | Free tier            | Status                           |
-| ---------- | ----------------------- | -------------------- | -------------------------------- |
-| Firecrawl  | `scraper/firecrawl.ts`  | 500 credits one-time | Active MVP                       |
-| Playwright | `scraper/playwright.ts` | Free (self-hosted)   | Backup if Firecrawl insufficient |
+| Provider   | File                    | Free tier            | Status     |
+| ---------- | ----------------------- | -------------------- | ---------- |
+| Firecrawl  | `scraper/firecrawl.ts`  | 500 credits one-time | Active MVP |
+| Playwright | `scraper/playwright.ts` | Free (self-hosted)   | Backup     |
 
-**Firecrawl** first — simple API, good extraction.
-**Playwright** as backup if volume exceeds the free tier or JS rendering is needed.
+**Firecrawl** is used for:
+
+- Scraping company websites in qualify step (priority pages: /jobs, /recrutement, /team)
+- Scraping WTTJ search result pages in discover step
+- Scraping company contact pages in enrich step
+
+**Credit cost awareness**: each Firecrawl scrape costs 1 credit. With 500 credits total, budget carefully. `scrapedContent` is passed from qualify → enrich to avoid double scraping.
 
 ---
 
 ### Email (contacts)
 
-| Provider              | File                 | Free tier                                           | Status     |
-| --------------------- | -------------------- | --------------------------------------------------- | ---------- |
-| Firecrawl (composite) | `email/firecrawl.ts` | Shares Firecrawl + Brave Search free tiers          | Active MVP |
-| Apollo.io             | `email/apollo.ts`    | 10 000 credits/month (corporate email signup)       | Available  |
-| Hunter.io             | `email/hunter.ts`    | Requires paid plan — free tier no longer accessible | Reference  |
+| Provider              | File                 | Free tier                                      | Status         |
+| --------------------- | -------------------- | ---------------------------------------------- | -------------- |
+| Firecrawl (composite) | `email/firecrawl.ts` | Shares Firecrawl credits                       | Active MVP     |
+| Apollo.io             | `email/apollo.ts`    | ~10,000 credits/month (corporate email signup) | Available      |
+| Hunter.io             | `email/hunter.ts`    | Requires paid plan                             | Reference only |
 
-**Primary strategy** — `FirecrawlEmailProvider` is a composite provider that reuses the already-present Brave Search and Firecrawl instances:
+**Primary strategy** — `FirecrawlEmailProvider`:
 
-1. **Brave Search** `site:${domain} email contact` → check result snippets for emails first (no Firecrawl credits)
-2. **Firecrawl scrape** only if snippets yielded nothing — targets pages the search engine already identified as relevant
-3. **Fallback** to common paths (`/contact`, `/equipe`, `/team`, …) if search returns no results
+1. Reuse `scrapedContent` from qualify if it contains emails — zero additional cost
+2. Scrape `/contact`, `/equipe`, `/team`, `/about` pages
+3. Extract emails from content using regex + LLM
 
-For `findContact(name, domain)`: searches `"name" "@domain"` broadly (email may surface in snippets from directories, GitHub, LinkedIn, etc.) — zero scrape cost when found.
-
-**Apollo** remains available as an alternative adapter if needed. Credit cost: 10 credits per reveal via `people/match`.
+**Apollo** remains available as a fallback adapter. Hunter requires a paid plan — not used in MVP.
 
 ---
 
 ### LLM
 
-| Provider | File            | Status                                   |
-| -------- | --------------- | ---------------------------------------- |
-| Any      | `llm/vercel.ts` | Single adapter — model passed at runtime |
+| Provider                | File            | Status                                   |
+| ----------------------- | --------------- | ---------------------------------------- |
+| Any (via Vercel AI SDK) | `llm/vercel.ts` | Single adapter — model passed at runtime |
 
-`VercelLLMProvider` wraps Vercel AI SDK (`generateText` + `Output.object()`).
-Switching from Claude to OpenAI = changing the model argument in the use case config, not the adapter.
+`VercelLLMProvider` wraps Vercel AI SDK (`generateText` + `generateObject`).
+Switching model = changing the model argument in the use case config, not the adapter.
 
 ---
 
 ## Free Tier Summary for MVP
 
-| Provider     | Free limit           | Risk                 |
-| ------------ | -------------------- | -------------------- |
-| Brave Search | 2,000 req/month      | Low                  |
-| SIRENE       | Unlimited            | None                 |
-| Pappers      | 100 req/month        | Medium               |
-| Firecrawl    | 500 credits one-time | High — one-time only |
-| Hunter.io    | 25 req/month         | High — very limited  |
-| Apollo.io    | 50 credits/month     | High — very limited  |
+| Provider       | Free limit             | Risk                    |
+| -------------- | ---------------------- | ----------------------- |
+| France Travail | Unlimited              | None                    |
+| SIRENE         | Unlimited              | None                    |
+| Brave Search   | 2,000 req/month        | Low (secondary role)    |
+| Pappers        | 100 req/month          | Medium                  |
+| Firecrawl      | 500 credits one-time   | High — budget carefully |
+| WTTJ scraping  | Uses Firecrawl credits | Medium                  |
+| Apollo.io      | ~10,000 credits/month  | Low                     |
 
-**Key bottleneck**: Hunter and Apollo are the free tier choke points.
-If volume increases, consider Playwright + direct site scraping for contacts.
+**Key constraint**: Firecrawl credits. Each company qualification costs 1 credit (scrape). Each WTTJ page costs 1 credit. Plan accordingly.
 
 ---
 
@@ -255,4 +304,5 @@ If volume increases, consider Playwright + direct site scraping for contacts.
 1. Create the file in `src/lib/providers/[category]/[name].ts`
 2. Implement the corresponding interface
 3. Register it in the relevant use case configuration
-4. Change nothing else
+4. Add the new `SignalSource` value in `src/types/index.ts` if it activates in discover
+5. Change nothing else
