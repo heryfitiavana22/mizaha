@@ -3,15 +3,16 @@ import type { ScraperProvider } from "@/lib/providers/interfaces/scraper";
 import logger from "@/lib/logger";
 import type {
   CompanyData,
+  JobPosting,
   QualifiedCompany,
+  QualifiedJobOffer,
   Result,
   SearchCriteria,
 } from "@/types";
 
 const SCORE_THRESHOLD = 0.5;
 
-// Pages most likely to contain relevant content depending on qualification intent.
-// Tried in order before falling back to the homepage.
+// Tried in order — priority pages are more likely to contain qualifying signals than the homepage.
 const PRIORITY_PATHS = [
   "/jobs",
   "/recrutement",
@@ -23,14 +24,14 @@ const PRIORITY_PATHS = [
   "/a-propos",
 ];
 
-type QualifyOptions = {
-  companies: CompanyData[];
+export type QualifyOptions = {
+  entities: CompanyData[] | JobPosting[];
   criteria: SearchCriteria;
   scraper: ScraperProvider;
   llm: LLMProvider;
 };
 
-type QualifyOneOptions = {
+type QualifyOneCompanyOptions = {
   company: CompanyData;
   criteria: SearchCriteria;
   scraper: ScraperProvider;
@@ -44,7 +45,6 @@ async function scrapeWithFallback({
   domain: string;
   scraper: ScraperProvider;
 }): Promise<{ content: string; url: string } | null> {
-  // Try priority pages first, then homepage
   const urlsToTry = [
     ...PRIORITY_PATHS.map((path) => `https://${domain}${path}`),
     `https://${domain}`,
@@ -56,20 +56,16 @@ async function scrapeWithFallback({
       return { content: result.data.content, url };
     }
   }
-
   return null;
 }
 
-async function qualifyOne({
+async function qualifyOneCompany({
   company,
   criteria,
   scraper,
   llm,
-}: QualifyOneOptions): Promise<QualifiedCompany | null> {
-  const scraped = await scrapeWithFallback({
-    domain: company.domain,
-    scraper,
-  });
+}: QualifyOneCompanyOptions): Promise<QualifiedCompany | null> {
+  const scraped = await scrapeWithFallback({ domain: company.domain, scraper });
 
   if (!scraped) {
     logger.warn(
@@ -100,21 +96,98 @@ async function qualifyOne({
   };
 }
 
-export async function qualify({
+async function qualifyOneJobOffer({
+  posting,
+  criteria,
+  llm,
+}: {
+  posting: JobPosting;
+  criteria: SearchCriteria;
+  llm: LLMProvider;
+}): Promise<QualifiedJobOffer | null> {
+  const qualifyResult = await llm.qualify({
+    entity: posting,
+    criteria,
+    // Job posting description is the content to score — no scraping needed
+    scrapedContent: posting.description,
+  });
+
+  if (!qualifyResult.success) {
+    logger.warn(
+      { url: posting.url, error: qualifyResult.error.message },
+      "qualify: LLM qualification failed — skipping job offer",
+    );
+    return null;
+  }
+
+  return {
+    ...posting,
+    qualification: qualifyResult.data,
+    scrapedContent: posting.description,
+  };
+}
+
+async function qualifyCompanies({
   companies,
   criteria,
   scraper,
   llm,
-}: QualifyOptions): Promise<Result<QualifiedCompany[]>> {
+}: {
+  companies: CompanyData[];
+  criteria: SearchCriteria;
+  scraper: ScraperProvider;
+  llm: LLMProvider;
+}): Promise<Result<QualifiedCompany[]>> {
   const settlements = await Promise.allSettled(
-    companies.map((company) => qualifyOne({ company, criteria, scraper, llm })),
+    companies.map((company) =>
+      qualifyOneCompany({ company, criteria, scraper, llm }),
+    ),
   );
-
   const qualified = settlements
-    .filter((s) => s.status === "fulfilled")
-    .map((s) => s.value)
+    .filter((settlement) => settlement.status === "fulfilled")
+    .map((settlement) => settlement.value)
     .filter((result): result is QualifiedCompany => result !== null)
     .filter((company) => company.qualification.score >= SCORE_THRESHOLD);
-
   return { success: true, data: qualified };
+}
+
+async function qualifyJobOffers({
+  postings,
+  criteria,
+  llm,
+}: {
+  postings: JobPosting[];
+  criteria: SearchCriteria;
+  llm: LLMProvider;
+}): Promise<Result<QualifiedJobOffer[]>> {
+  const settlements = await Promise.allSettled(
+    postings.map((posting) => qualifyOneJobOffer({ posting, criteria, llm })),
+  );
+  const qualified = settlements
+    .filter((settlement) => settlement.status === "fulfilled")
+    .map((settlement) => settlement.value)
+    .filter((result): result is QualifiedJobOffer => result !== null)
+    .filter((offer) => offer.qualification.score >= SCORE_THRESHOLD);
+  return { success: true, data: qualified };
+}
+
+export async function qualify({
+  entities,
+  criteria,
+  scraper,
+  llm,
+}: QualifyOptions): Promise<Result<QualifiedCompany[] | QualifiedJobOffer[]>> {
+  if (criteria.targetEntity === "job_offer") {
+    return qualifyJobOffers({
+      postings: entities as JobPosting[],
+      criteria,
+      llm,
+    });
+  }
+  return qualifyCompanies({
+    companies: entities as CompanyData[],
+    criteria,
+    scraper,
+    llm,
+  });
 }

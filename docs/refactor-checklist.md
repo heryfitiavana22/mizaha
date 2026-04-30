@@ -164,7 +164,7 @@
 
 ## Phase 6 — Pipeline Steps
 
-- [ ] **REWRITE** `src/lib/pipeline/steps/discover.ts`
+- [x] **REWRITE** `src/lib/pipeline/steps/discover.ts`
 
   This is the most critical change. Full rewrite.
 
@@ -195,14 +195,14 @@
 
   **Never** use URL domain from Brave results directly as company domain.
 
-- [ ] **UPDATE** `src/lib/pipeline/steps/qualify.ts`
+- [x] **UPDATE** `src/lib/pipeline/steps/qualify.ts`
   - Accept `CompanyData[] | JobPosting[]` as input
   - For companies: scrape priority pages (`/jobs`, `/recrutement`, `/careers`, homepage), store `scrapedContent` in result
   - For job offers: pass the posting `description` as `scrapedContent` to the LLM — no Firecrawl call
   - Score threshold: 0.5 (keep existing)
   - Fix: `scrapedContent` must be passed to enrich (was being lost before)
 
-- [ ] **UPDATE** `src/lib/pipeline/steps/enrich.ts`
+- [x] **UPDATE** `src/lib/pipeline/steps/enrich.ts`
   - Accept `QualifiedCompany[] | QualifiedJobOffer[]` as input
   - For companies: use `scrapedContent` from qualify to extract emails → fallback scrape `/contact`, `/equipe`, `/team`
   - For job offers: call `company.findByName(posting.companyName)` to add official company data
