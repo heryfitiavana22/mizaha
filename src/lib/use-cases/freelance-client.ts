@@ -11,7 +11,7 @@ import type { UseCaseConfig } from "./index";
 const OPENAI_MODEL_ID = "gpt-5.4-mini";
 
 export const freelanceClientConfig: UseCaseConfig = {
-  name: "freelance",
+  name: "freelance-client",
   description: "Freelance developer looking for client missions in France",
   targetEntity: "company",
   enrichStrategy: "domain",

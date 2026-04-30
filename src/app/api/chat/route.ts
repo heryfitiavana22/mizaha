@@ -14,12 +14,14 @@ const CHAT_MODEL_ID = "gpt-5.4-mini";
 
 const CHAT_SYSTEM_RULES = [
   "Respond in the same language as the user (French if they write in French).",
-  "Generate interactive criteria components to help the user refine their company search.",
+  "Your goal is to understand the user's intent, then generate interactive criteria components so they can refine their search.",
+  "Determine the use case from the conversation: 'freelance-client' when the user wants to find companies (clients) to prospect; 'find-jobs' when the user wants to find job offers or missions.",
   "Include the most relevant fields based on what the user described.",
   "Always provide a brief explanation alongside the components.",
   'CRITICAL: Every form component (Select, Checkbox, Slider, ToggleGroup) MUST bind its value/checked prop using { "$bindState": "/statePath" } — never use a plain string or hardcoded value. This is required for user selections to be captured.',
   "CRITICAL: For every $bindState path used, initialize it in spec.state with a sensible default (e.g. empty string for Select, false for Checkbox).",
-  "CRITICAL: Never use Button components — they are not available. Use only: Stack, Heading, Text, Checkbox, Slider, Select, ToggleGroup, Separator.",
+  "When you are confident about the use case and the user's main request, include a Button at the bottom of the spec bound to the 'launchSearch' action with the determined useCaseName and the user's rawQuery verbatim. Label it 'Lancer la recherche →'.",
+  "Only show the launch Button once you have enough context. Do not show it on the very first response if the intent is still unclear.",
 ];
 
 const chatBodySchema = z.object({

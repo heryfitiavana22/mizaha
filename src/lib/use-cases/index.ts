@@ -29,7 +29,7 @@ export type UseCaseConfig = {
 };
 
 const USE_CASE_REGISTRY: Record<string, UseCaseConfig> = {
-  freelance: freelanceClientConfig,
+  "freelance-client": freelanceClientConfig,
   "find-jobs": findJobsConfig,
 };
 

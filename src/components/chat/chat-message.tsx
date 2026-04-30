@@ -14,12 +14,14 @@ type ChatMessageProps = {
   message: UIMessage;
   isStreaming?: boolean;
   stateStore?: StateStore;
+  onLaunchSearch?: (params: { useCaseName: string; rawQuery: string }) => void;
 };
 
 export function ChatMessage({
   message,
   isStreaming,
   stateStore,
+  onLaunchSearch,
 }: ChatMessageProps) {
   const { spec, text, hasSpec } = useJsonRenderMessage(
     message.parts as Parameters<typeof useJsonRenderMessage>[0],
@@ -34,6 +36,7 @@ export function ChatMessage({
             spec={spec}
             loading={isStreaming}
             store={stateStore}
+            onLaunchSearch={onLaunchSearch}
           />
         )}
       </MessageContent>

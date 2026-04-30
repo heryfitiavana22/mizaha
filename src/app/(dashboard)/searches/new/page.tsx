@@ -1,26 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { createStateStore } from "@json-render/core";
 import { flattenSnapshot } from "@/lib/utils/flatten-snapshot";
-import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessage } from "@/components/chat/chat-message";
-import { CriteriaDisplay } from "@/components/chat/criteria-display";
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 
-const USE_CASE_NAME = "freelance";
-
 export default function NewSearchPage() {
   const router = useRouter();
-  const [rawQuery, setRawQuery] = useState("");
   const [isLaunching, setIsLaunching] = useState(false);
   const stateStore = useMemo(() => createStateStore(), []);
 
@@ -29,11 +24,8 @@ export default function NewSearchPage() {
   });
 
   const isStreaming = status === "streaming" || status === "submitted";
-  const hasMessages = messages.length > 0;
 
   const handleSend = ({ text }: { text: string }) => {
-    if (!rawQuery) setRawQuery(text);
-
     const criteriaLines = flattenSnapshot(stateStore.getSnapshot());
     const fullText =
       criteriaLines.length > 0
@@ -43,40 +35,42 @@ export default function NewSearchPage() {
     sendMessage({ text: fullText });
   };
 
-  const handleLaunch = async () => {
-    if (!rawQuery) return;
-    setIsLaunching(true);
-    try {
-      const response = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rawQuery,
-          useCaseName: USE_CASE_NAME,
-          uiCriteria: stateStore.getSnapshot(),
-        }),
-      });
-      if (!response.ok) throw new Error("Pipeline failed to start");
-      const { searchId } = (await response.json()) as { searchId: string };
-      router.push(`/searches/${searchId}`);
-    } catch {
-      setIsLaunching(false);
-    }
-  };
+  const handleLaunch = useCallback(
+    async (params: { useCaseName: string; rawQuery: string }) => {
+      if (!params.rawQuery || !params.useCaseName) return;
+      setIsLaunching(true);
+      try {
+        const response = await fetch("/api/pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rawQuery: params.rawQuery,
+            useCaseName: params.useCaseName,
+            uiCriteria: stateStore.getSnapshot(),
+          }),
+        });
+        if (!response.ok) throw new Error("Pipeline failed to start");
+        const { searchId } = (await response.json()) as { searchId: string };
+        router.push(`/searches/${searchId}`);
+      } catch {
+        setIsLaunching(false);
+      }
+    },
+    [router, stateStore],
+  );
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-3xl flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Nouvelle recherche</h1>
         <p className="text-sm text-muted-foreground">
-          Décrivez les entreprises que vous cherchez. L&apos;IA vous posera des
-          questions pour affiner vos critères.
+          Décrivez ce que vous cherchez — entreprises à prospecter, missions
+          freelance, offres d&apos;emploi. L&apos;IA affine les critères et
+          lance la recherche quand tout est prêt.
         </p>
       </div>
 
-      {rawQuery && <CriteriaDisplay rawQuery={rawQuery} />}
-
-      {hasMessages && (
+      {messages.length > 0 && (
         <Conversation className="h-100 rounded-md border">
           <ConversationContent>
             {messages.map((message, i) => (
@@ -85,6 +79,7 @@ export default function NewSearchPage() {
                 message={message}
                 isStreaming={isStreaming && i === messages.length - 1}
                 stateStore={stateStore}
+                onLaunchSearch={handleLaunch}
               />
             ))}
           </ConversationContent>
@@ -94,15 +89,10 @@ export default function NewSearchPage() {
 
       <ChatInput onSubmit={handleSend} status={status} onStop={stop} />
 
-      {hasMessages && !isStreaming && (
-        <div className="flex justify-end">
-          <Button
-            onClick={() => void handleLaunch()}
-            disabled={isLaunching || !rawQuery}
-          >
-            {isLaunching ? "Lancement en cours…" : "Lancer la recherche →"}
-          </Button>
-        </div>
+      {isLaunching && (
+        <p className="text-sm text-muted-foreground text-center">
+          Lancement en cours…
+        </p>
       )}
     </div>
   );

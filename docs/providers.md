@@ -186,7 +186,12 @@ type SearchCriteria = {
   qualificationCriteria: string[]; // what Claude verifies per entity
 };
 
-type SignalSource = "france_travail" | "wttj" | "pappers_search" | "brave";
+type SignalSource =
+  | "france_travail"
+  | "wttj"
+  | "pappers_search"
+  | "brave"
+  | "free_work";
 
 type QualificationResult = {
   score: number; // 0.0 to 1.0
