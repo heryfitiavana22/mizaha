@@ -142,18 +142,18 @@
 
 ## Phase 5 — Use Case Configs
 
-- [ ] **UPDATE** `src/lib/use-cases/index.ts`
+- [x] **UPDATE** `src/lib/use-cases/index.ts`
   - Update `UseCaseConfig` type: add `targetEntity`, remove `signals`/`scoringWeights`
   - Keep: `providers`, `enrichStrategy`, `maxResults`
   - Add `jobBoard` provider to the `providers` object
 
-- [ ] **UPDATE** `src/lib/use-cases/freelance.ts` (or rename to `freelance-client.ts`)
+- [x] **UPDATE** `src/lib/use-cases/freelance.ts` (or rename to `freelance-client.ts`)
   - Remove `signals` and `scoringWeights`
   - Add `targetEntity: "company"`
   - Add `jobBoard` providers: France Travail + WTTJ
   - Keep: `enrichStrategy: "domain"`, `maxResults: 20`
 
-- [ ] **ADD** `src/lib/use-cases/find-jobs.ts`
+- [x] **ADD** `src/lib/use-cases/find-jobs.ts`
   - `targetEntity: "job_offer"`
   - `jobBoard` providers: France Travail + WTTJ
   - `enrichStrategy: "domain"`
