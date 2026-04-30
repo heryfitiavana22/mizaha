@@ -42,25 +42,25 @@
 │   │   ├── providers/                # Abstraction layer — NEVER BYPASS
 │   │   │   ├── interfaces/
 │   │   │   │   ├── search.ts         # SearchProvider
-│   │   │   │   ├── company.ts        # CompanyProvider
+│   │   │   │   ├── company.ts        # CompanyProvider (includes findByName)
+│   │   │   │   ├── job-board.ts      # JobBoardProvider
 │   │   │   │   ├── scraper.ts        # ScraperProvider
-│   │   │   │   ├── email.ts          # EmailProvider
 │   │   │   │   └── llm.ts            # LLMProvider
 │   │   │   ├── search/
-│   │   │   │   ├── brave.ts          # → implements SearchProvider
+│   │   │   │   ├── brave.ts          # → implements SearchProvider (secondary — news/funding only)
 │   │   │   │   └── serp.ts           # → implements SearchProvider (backup)
 │   │   │   ├── company/
 │   │   │   │   ├── pappers.ts        # → implements CompanyProvider
 │   │   │   │   └── sirene.ts         # → implements CompanyProvider
+│   │   │   ├── job-board/
+│   │   │   │   ├── france-travail.ts # → implements JobBoardProvider (primary)
+│   │   │   │   └── wttj.ts           # → implements JobBoardProvider (via Firecrawl)
 │   │   │   ├── scraper/
 │   │   │   │   ├── firecrawl.ts      # → implements ScraperProvider
 │   │   │   │   └── playwright.ts     # → implements ScraperProvider (backup)
-│   │   │   ├── email/
-│   │   │   │   ├── hunter.ts         # → implements EmailProvider
-│   │   │   │   └── apollo.ts         # → implements EmailProvider (backup)
 │   │   │   └── llm/
-│   │   │       ├── claude.ts         # → implements LLMProvider (primary)
-│   │   │       └── openai.ts         # → implements LLMProvider (backup)
+│   │   │       ├── openai.ts         # → implements LLMProvider (MVP)
+│   │   │       └── claude.ts         # → implements LLMProvider (future — switch in use-case config)
 │   │   │
 │   │   ├── pipeline/
 │   │   │   ├── steps/
@@ -71,8 +71,9 @@
 │   │   │   └── index.ts                  # Orchestrator — step order + pipeline_runs
 │   │   │
 │   │   ├── use-cases/
-│   │   │   ├── freelance.ts              # Freelance use case config (MVP)
-│   │   │   ├── agency.ts                 # Agency use case config (future)
+│   │   │   ├── freelance-client.ts       # UC1 — find companies that need a dev
+│   │   │   ├── find-jobs.ts              # UC2 — find job/mission offers
+│   │   │   ├── agency.ts                 # UC3 — agency prospecting (future)
 │   │   │   └── index.ts                  # Registry — lookup by use case name
 │   │   │
 │   │   ├── ui-generative/                # json-render — generative UI
@@ -85,6 +86,7 @@
 │   │   └── ai/
 │   │       ├── prompts/                  # Versioned LLM prompts — never inline in code
 │   │       │   ├── extract-criteria.ts
+│   │       │   ├── extract-company-names.ts  # Extract company names from Brave/job board results
 │   │       │   ├── qualify.ts
 │   │       │   └── generate-draft.ts
 │   │       └── tools/                    # Vercel AI SDK tool definitions
@@ -160,8 +162,8 @@ or does it belong to a specific layer? Decide case by case while coding.
 # Database
 DATABASE_URL=postgresql://postgres:password@localhost:5432/mizaha
 
-# LLM
-ANTHROPIC_API_KEY=
+# LLM (MVP: OpenAI — future: switch to Claude by changing the model in use-case config)
+OPENAI_API_KEY=
 
 # Search
 BRAVE_SEARCH_API_KEY=
@@ -170,10 +172,13 @@ SERP_API_KEY=
 # Company data
 PAPPERS_API_KEY=
 
+# Job boards
+FRANCE_TRAVAIL_CLIENT_ID=
+FRANCE_TRAVAIL_CLIENT_SECRET=
+
 # Scraping
 FIRECRAWL_API_KEY=
 
-# Email / Contacts
-HUNTER_API_KEY=
+# Email / Contacts (optional backup)
 APOLLO_API_KEY=
 ```

@@ -10,17 +10,19 @@ A name that reflects exactly what the project does: find and examine companies.
 
 ## Index
 
-| File                                           | Content                                    |
-| ---------------------------------------------- | ------------------------------------------ |
-| [vision.md](./vision.md)                       | The idea, the problem solved, the future   |
-| [use-cases.md](./use-cases.md)                 | Use cases, manual → automated pipeline     |
-| [tech-stack.md](./tech-stack.md)               | All technology decisions and why           |
-| [architecture.md](./architecture.md)           | System architecture, pipeline, abstraction |
-| [database.md](./database.md)                   | Complete database schema                   |
-| [providers.md](./providers.md)                 | External APIs, interfaces, free tiers      |
-| [project-structure.md](./project-structure.md) | Project folder structure                   |
-| [conventions.md](./conventions.md)             | Code conventions — rules to follow         |
-| [checklist.md](./checklist.md)                 | Build checklist — phases A to Z            |
+| File                                             | Content                                              |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| [vision.md](./vision.md)                         | The idea, the problem solved, the future             |
+| [use-cases.md](./use-cases.md)                   | Use cases, manual → automated pipeline               |
+| [tech-stack.md](./tech-stack.md)                 | All technology decisions and why                     |
+| [architecture.md](./architecture.md)             | System architecture, pipeline, abstraction           |
+| [database.md](./database.md)                     | Complete database schema                             |
+| [providers.md](./providers.md)                   | External APIs, interfaces, free tiers                |
+| [project-structure.md](./project-structure.md)   | Project folder structure                             |
+| [conventions.md](./conventions.md)               | Code conventions — rules to follow                   |
+| [checklist.md](./checklist.md)                   | Build checklist — phases A to Z (from scratch)       |
+| [refactor-checklist.md](./refactor-checklist.md) | Refactor checklist — what to change in existing code |
+| [alignment.md](./alignment.md)                   | Alignment doc — read before coding the refactor      |
 
 ---
 

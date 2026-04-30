@@ -39,16 +39,20 @@ The AI adapts the results layout based on the search context. Search by region �
 
 ## Artificial Intelligence
 
-| Tool                   | Role     | Reason                                                   |
-| ---------------------- | -------- | -------------------------------------------------------- |
-| Claude API (Anthropic) | Main LLM | Best for understanding complex natural language criteria |
+| Tool                   | Role              | Reason                                                             |
+| ---------------------- | ----------------- | ------------------------------------------------------------------ |
+| OpenAI API             | LLM — MVP         | No Claude subscription yet — Vercel AI SDK makes it easy to switch |
+| Claude API (Anthropic) | LLM — target      | Best for understanding complex natural language criteria           |
+| Vercel AI SDK          | LLM adapter layer | Model-agnostic — switching from OpenAI to Claude = one line change |
 
-Claude is used for:
+The LLM is used for:
 
 - Extracting structured criteria from natural language
-- Qualifying and scoring each found company
-- Explaining why a company matches
+- Qualifying and scoring each found entity (company or job offer)
+- Explaining why a result matches
 - Generating a contact message draft
+
+**NOTE**: OpenAI (`gpt-4o-mini`) via Vercel AI SDK.
 
 ---
 
@@ -143,11 +147,12 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
-    ANTHROPIC_API_KEY: z.string().min(1),
+    OPENAI_API_KEY: z.string().min(1),
     BRAVE_SEARCH_API_KEY: z.string().min(1),
     PAPPERS_API_KEY: z.string().min(1),
     FIRECRAWL_API_KEY: z.string().min(1),
-    HUNTER_API_KEY: z.string().min(1),
+    FRANCE_TRAVAIL_CLIENT_ID: z.string().min(1),
+    FRANCE_TRAVAIL_CLIENT_SECRET: z.string().min(1),
     APOLLO_API_KEY: z.string().optional(),
     SERP_API_KEY: z.string().optional(),
   },
