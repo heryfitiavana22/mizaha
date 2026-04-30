@@ -6,6 +6,7 @@ import {
   real,
   text,
   timestamp,
+  unique,
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
@@ -54,7 +55,7 @@ export const searches = pgTable("searches", {
   orgId: uuid("org_id").references(() => organizations.id), // nullable
   rawQuery: text("raw_query").notNull(),
   criteria: jsonb("criteria").notNull(),
-  useCase: text("use_case").notNull(), // freelance | agency | commercial | ...
+  useCase: text("use_case").notNull(), // freelance-client | find-jobs | agency | ...
   status: text("status").default("pending"), // pending | running | completed | failed
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -90,49 +91,48 @@ export const scheduledSearches = pgTable("scheduled_searches", {
 });
 
 // ---------------------------------------------------------------------------
-// companies — global, deduplicated by domain
+// entities — central table, all discovered entities (companies, job offers, ...)
+// Deduplicated by (type, dedup_key)
 // ---------------------------------------------------------------------------
-export const companies = pgTable("companies", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  website: text("website"),
-  domain: text("domain").unique().notNull(), // deduplication key
-  description: text("description"),
-  sector: text("sector"),
-  location: text("location"),
-  employeeCount: integer("employee_count"),
-  techStack: jsonb("tech_stack").default([]),
-  funding: jsonb("funding").default({}), // { amount, date, round, investors }
-  lastScrapedAt: timestamp("last_scraped_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const entities = pgTable(
+  "entities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    type: text("type").notNull(), // "company" | "job_offer" | "agency" | ...
+    dedupKey: text("dedup_key").notNull(), // domain (company), url (job_offer), etc.
+    data: jsonb("data").notNull(), // structure depends on type
+    enrichedAt: timestamp("enriched_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [unique().on(table.type, table.dedupKey)],
+);
 
 // ---------------------------------------------------------------------------
-// search_companies — junction search ↔ company
+// search_results — links a search to its results (one row per entity per search)
 // ---------------------------------------------------------------------------
-export const searchCompanies = pgTable("search_companies", {
+export const searchResults = pgTable("search_results", {
   id: uuid("id").primaryKey().defaultRandom(),
   searchId: uuid("search_id")
     .notNull()
     .references(() => searches.id),
-  companyId: uuid("company_id")
+  entityId: uuid("entity_id")
     .notNull()
-    .references(() => companies.id),
-  relevanceScore: real("relevance_score").notNull(), // 0.0 to 1.0
-  relevanceReason: text("relevance_reason").notNull(),
+    .references(() => entities.id),
+  score: real("score").notNull(), // 0.0 to 1.0
+  reason: text("reason").notNull(), // readable explanation
   status: text("status").default("new"), // new | viewed | contacted | dismissed
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
-// data_sources — which provider found what for each company
+// data_sources — which provider found what for each entity
 // ---------------------------------------------------------------------------
 export const dataSources = pgTable("data_sources", {
   id: uuid("id").primaryKey().defaultRandom(),
-  companyId: uuid("company_id")
+  entityId: uuid("entity_id")
     .notNull()
-    .references(() => companies.id),
-  providerName: text("provider_name").notNull(), // brave | pappers | sirene | firecrawl | ...
+    .references(() => entities.id),
+  providerName: text("provider_name").notNull(), // brave | pappers | france_travail | wttj | firecrawl | ...
   rawData: jsonb("raw_data").notNull(),
   fetchedAt: timestamp("fetched_at").defaultNow(),
 });
@@ -142,9 +142,9 @@ export const dataSources = pgTable("data_sources", {
 // ---------------------------------------------------------------------------
 export const contacts = pgTable("contacts", {
   id: uuid("id").primaryKey().defaultRandom(),
-  companyId: uuid("company_id")
+  entityId: uuid("entity_id")
     .notNull()
-    .references(() => companies.id),
+    .references(() => entities.id),
   name: text("name").notNull(),
   title: text("title"),
   email: text("email"),
@@ -153,14 +153,14 @@ export const contacts = pgTable("contacts", {
 });
 
 // ---------------------------------------------------------------------------
-// user_company_interactions
+// user_entity_interactions
 // ---------------------------------------------------------------------------
-export const userCompanyInteractions = pgTable("user_company_interactions", {
+export const userEntityInteractions = pgTable("user_entity_interactions", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").references(() => users.id), // nullable in MVP
-  companyId: uuid("company_id")
+  entityId: uuid("entity_id")
     .notNull()
-    .references(() => companies.id),
+    .references(() => entities.id),
   searchId: uuid("search_id").references(() => searches.id), // nullable
   type: text("type").notNull(), // saved | blacklisted | viewed | contacted | dismissed
   metadata: jsonb("metadata").default({}),
@@ -179,13 +179,13 @@ export const tags = pgTable("tags", {
 });
 
 // ---------------------------------------------------------------------------
-// company_tags — junction company ↔ tag
+// entity_tags — junction entity ↔ tag
 // ---------------------------------------------------------------------------
-export const companyTags = pgTable("company_tags", {
+export const entityTags = pgTable("entity_tags", {
   id: uuid("id").primaryKey().defaultRandom(),
-  companyId: uuid("company_id")
+  entityId: uuid("entity_id")
     .notNull()
-    .references(() => companies.id),
+    .references(() => entities.id),
   tagId: uuid("tag_id")
     .notNull()
     .references(() => tags.id),
@@ -221,8 +221,6 @@ export const pipelineRuns = pgTable("pipeline_runs", {
   status: text("status").notNull(), // running | completed | failed
   error: text("error"),
   durationMs: integer("duration_ms"),
-  inputData: jsonb("input_data"),
-  outputData: jsonb("output_data"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -232,9 +230,9 @@ export const pipelineRuns = pgTable("pipeline_runs", {
 export const resultFeedback = pgTable("result_feedback", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").references(() => users.id), // nullable in MVP
-  searchCompanyId: uuid("search_company_id")
+  searchResultId: uuid("search_result_id")
     .notNull()
-    .references(() => searchCompanies.id),
+    .references(() => searchResults.id),
   rating: integer("rating").notNull(), // 1 to 5
   reason: text("reason"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -298,13 +296,13 @@ export const usageLogs = pgTable("usage_logs", {
 });
 
 // ---------------------------------------------------------------------------
-// company_embeddings — pgvector
+// entity_embeddings — pgvector
 // ---------------------------------------------------------------------------
-export const companyEmbeddings = pgTable("company_embeddings", {
+export const entityEmbeddings = pgTable("entity_embeddings", {
   id: uuid("id").primaryKey().defaultRandom(),
-  companyId: uuid("company_id")
+  entityId: uuid("entity_id")
     .notNull()
-    .references(() => companies.id),
+    .references(() => entities.id),
   embedding: vector("embedding", { dimensions: 1536 }).notNull(),
   modelUsed: text("model_used").notNull(), // e.g.: text-embedding-3-small
   createdAt: timestamp("created_at").defaultNow(),
