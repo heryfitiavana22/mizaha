@@ -1,18 +1,36 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CompanyData } from "@/types";
+import type { CompanyData, JobPosting, SearchCriteria } from "@/types";
 import { discover } from "@/lib/pipeline/steps/discover";
 import { fakeCompany } from "@/tests/fixtures/company";
+import { fakeJobPosting } from "@/tests/fixtures/job-posting";
 import { fakeCriteria } from "@/tests/fixtures/search";
 import {
   makeMockCompanyProvider,
+  makeMockJobBoardProvider,
   makeMockLLMProvider,
   makeMockSearchProvider,
 } from "@/tests/mocks/providers";
 
-describe("discover", () => {
-  it("returns companies extracted by LLM from search results", async () => {
+const criteriaWithPappers: SearchCriteria = {
+  ...fakeCriteria,
+  signalSources: ["pappers_search"],
+};
+
+const criteriaWithBrave: SearchCriteria = {
+  ...fakeCriteria,
+  signalSources: ["brave"],
+};
+
+const criteriaJobOffer: SearchCriteria = {
+  ...fakeCriteria,
+  targetEntity: "job_offer",
+  signalSources: ["france_travail"],
+};
+
+describe("discover — company mode", () => {
+  it("discovers companies from pappers and tags them with source pappers_search", async () => {
     const result = await discover({
-      criteria: fakeCriteria,
+      criteria: criteriaWithPappers,
       search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
       llm: makeMockLLMProvider(),
@@ -20,27 +38,87 @@ describe("discover", () => {
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data).toHaveLength(1);
-    expect((result.data as CompanyData[])[0].domain).toBe(fakeCompany.domain);
+    const companies = result.data as CompanyData[];
+    expect(companies).toHaveLength(1);
+    expect(companies[0].domain).toBe(fakeCompany.domain);
+    expect(companies[0].source).toBe("pappers_search");
   });
 
-  it("returns failure when all search strategies fail", async () => {
-    const error = new Error("Search API down");
-    const search = makeMockSearchProvider({
-      search: vi.fn().mockResolvedValue({ success: false, error }),
+  it("discovers companies from job board names and tags them with provider signalSource", async () => {
+    const jobBoard = makeMockJobBoardProvider({
+      signalSource: "france_travail",
+      searchJobs: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: [fakeJobPosting] }),
     });
 
     const result = await discover({
-      criteria: fakeCriteria,
-      search,
+      criteria: { ...fakeCriteria, signalSources: ["france_travail"] },
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+      jobBoardProviders: [jobBoard],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const companies = result.data as CompanyData[];
+    expect(companies).toHaveLength(1);
+    expect(companies[0].source).toBe("france_travail");
+  });
+
+  it("discovers companies from brave and tags them with source brave", async () => {
+    const result = await discover({
+      criteria: criteriaWithBrave,
+      search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
       llm: makeMockLLMProvider(),
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const companies = result.data as CompanyData[];
+    expect(companies).toHaveLength(1);
+    expect(companies[0].source).toBe("brave");
   });
 
-  it("returns empty when LLM extracts no companies", async () => {
+  it("deduplicates companies with the same domain", async () => {
+    const llm = makeMockLLMProvider({
+      extractCompanyNames: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: ["Acme SAS", "Acme"] }),
+    });
+
+    const result = await discover({
+      criteria: criteriaWithBrave,
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(1);
+  });
+
+  it("skips company when findByName returns null", async () => {
+    const company = makeMockCompanyProvider({
+      findByName: vi.fn().mockResolvedValue({ success: true, data: null }),
+    });
+
+    const result = await discover({
+      criteria: criteriaWithBrave,
+      search: makeMockSearchProvider(),
+      company,
+      llm: makeMockLLMProvider(),
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(0);
+  });
+
+  it("returns empty when brave extractCompanyNames returns empty", async () => {
     const llm = makeMockLLMProvider({
       extractCompanyNames: vi
         .fn()
@@ -48,7 +126,7 @@ describe("discover", () => {
     });
 
     const result = await discover({
-      criteria: fakeCriteria,
+      criteria: criteriaWithBrave,
       search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
       llm,
@@ -59,56 +137,91 @@ describe("discover", () => {
     expect(result.data).toHaveLength(0);
   });
 
-  it("deduplicates companies that resolve to the same domain", async () => {
-    const llm = makeMockLLMProvider({
-      extractCompanyNames: vi
-        .fn()
-        .mockResolvedValue({ success: true, data: ["Acme SAS", "Acme"] }),
-    });
-    // Both names resolve to the same domain via the same mock search
-    const result = await discover({
-      criteria: fakeCriteria,
-      search: makeMockSearchProvider(),
-      company: makeMockCompanyProvider(),
-      llm,
-    });
-
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-    expect(result.data).toHaveLength(1);
-  });
-
-  it("builds minimal company from domain when registry returns null", async () => {
-    const company = makeMockCompanyProvider({
-      findByDomain: vi.fn().mockResolvedValue({ success: true, data: null }),
-    });
-
-    const result = await discover({
-      criteria: fakeCriteria,
-      search: makeMockSearchProvider(),
-      company,
-      llm: makeMockLLMProvider(),
-    });
-
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-    expect(result.data).toHaveLength(1);
-    expect((result.data as CompanyData[])[0].domain).toBe("acme.fr");
-  });
-
-  it("uses searchStrategies from criteria as search queries", async () => {
+  it("does not call brave search when brave is not in signalSources", async () => {
     const search = makeMockSearchProvider();
 
     await discover({
-      criteria: fakeCriteria,
+      criteria: criteriaWithPappers,
       search,
       company: makeMockCompanyProvider(),
       llm: makeMockLLMProvider(),
     });
 
-    const queries = vi.mocked(search.search).mock.calls.map((c) => c[0].query);
-    for (const strategy of fakeCriteria.searchStrategies) {
-      expect(queries).toContain(strategy);
-    }
+    expect(search.search).not.toHaveBeenCalled();
+  });
+});
+
+describe("discover — job_offer mode", () => {
+  it("returns JobPosting[] from job board providers", async () => {
+    const jobBoard = makeMockJobBoardProvider();
+
+    const result = await discover({
+      criteria: criteriaJobOffer,
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+      jobBoardProviders: [jobBoard],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const postings = result.data as JobPosting[];
+    expect(postings).toHaveLength(1);
+    expect(postings[0].title).toBe(fakeJobPosting.title);
+    expect(postings[0].source).toBe("france_travail");
+  });
+
+  it("deduplicates job postings with the same URL", async () => {
+    const jobBoard1 = makeMockJobBoardProvider({
+      signalSource: "france_travail",
+    });
+    const jobBoard2 = makeMockJobBoardProvider({ signalSource: "wttj" });
+
+    const result = await discover({
+      criteria: {
+        ...criteriaJobOffer,
+        signalSources: ["france_travail", "wttj"],
+      },
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+      jobBoardProviders: [jobBoard1, jobBoard2],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(1);
+  });
+
+  it("returns failure when no job board providers are configured", async () => {
+    const result = await discover({
+      criteria: criteriaJobOffer,
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("continues when one job board provider fails", async () => {
+    const failingBoard = makeMockJobBoardProvider({
+      searchJobs: vi
+        .fn()
+        .mockResolvedValue({ success: false, error: new Error("API down") }),
+    });
+    const workingBoard = makeMockJobBoardProvider({ signalSource: "wttj" });
+
+    const result = await discover({
+      criteria: criteriaJobOffer,
+      search: makeMockSearchProvider(),
+      company: makeMockCompanyProvider(),
+      llm: makeMockLLMProvider(),
+      jobBoardProviders: [failingBoard, workingBoard],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(1);
   });
 });

@@ -1,4 +1,4 @@
-import type { JobPosting, Result } from "@/types";
+import type { JobPosting, Result, SignalSource } from "@/types";
 
 export type JobSearchCriteria = {
   keywords?: string[];
@@ -11,5 +11,6 @@ export type JobSearchCriteria = {
 
 export interface JobBoardProvider {
   readonly name: string;
+  readonly signalSource: SignalSource;
   searchJobs(criteria: JobSearchCriteria): Promise<Result<JobPosting[]>>;
 }

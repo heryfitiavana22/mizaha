@@ -222,12 +222,12 @@
 
 ## Phase 8 — Tests
 
-- [ ] **ADD** `src/lib/providers/job-board/__tests__/france-travail.test.ts`
-- [ ] **ADD** `src/lib/providers/job-board/__tests__/wttj.test.ts`
-- [ ] **UPDATE** `src/lib/pipeline/steps/__tests__/discover.test.ts` — test new multi-source logic
-- [ ] **UPDATE** `src/lib/pipeline/steps/__tests__/qualify.test.ts` — test both entity types
-- [ ] **UPDATE** `src/lib/pipeline/steps/__tests__/enrich.test.ts` — test both entity types
-- [ ] **UPDATE** `src/tests/mocks/providers.ts` — add `JobBoardProvider` mock
+- [x] **ADD** `src/lib/providers/job-board/__tests__/france-travail.test.ts`
+- [x] **ADD** `src/lib/providers/job-board/__tests__/wttj.test.ts`
+- [x] **UPDATE** `src/lib/pipeline/steps/__tests__/discover.test.ts` — test new multi-source logic
+- [x] **UPDATE** `src/lib/pipeline/steps/__tests__/qualify.test.ts` — test both entity types
+- [x] **UPDATE** `src/lib/pipeline/steps/__tests__/enrich.test.ts` — test both entity types
+- [x] **UPDATE** `src/tests/mocks/providers.ts` — add `JobBoardProvider` mock
 
 ---
 

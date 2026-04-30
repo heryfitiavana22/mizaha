@@ -1,10 +1,12 @@
 import { vi } from "vitest";
 import type { CompanyProvider } from "@/lib/providers/interfaces/company";
 import type { EmailProvider } from "@/lib/providers/interfaces/email";
+import type { JobBoardProvider } from "@/lib/providers/interfaces/job-board";
 import type { LLMProvider } from "@/lib/providers/interfaces/llm";
 import type { ScraperProvider } from "@/lib/providers/interfaces/scraper";
 import type { SearchProvider } from "@/lib/providers/interfaces/search";
 import { fakeCompany, fakeQualifiedCompany } from "@/tests/fixtures/company";
+import { fakeJobPosting } from "@/tests/fixtures/job-posting";
 import { fakeCriteria } from "@/tests/fixtures/search";
 
 export function makeMockSearchProvider(
@@ -72,6 +74,19 @@ export function makeMockEmailProvider(
       ],
     }),
     findContact: vi.fn().mockResolvedValue({ success: true, data: null }),
+    ...overrides,
+  };
+}
+
+export function makeMockJobBoardProvider(
+  overrides?: Partial<JobBoardProvider>,
+): JobBoardProvider {
+  return {
+    name: "MockJobBoard",
+    signalSource: "france_travail",
+    searchJobs: vi
+      .fn()
+      .mockResolvedValue({ success: true, data: [fakeJobPosting] }),
     ...overrides,
   };
 }

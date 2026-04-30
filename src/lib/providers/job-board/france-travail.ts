@@ -119,6 +119,7 @@ async function fetchOffres({
 
 export class FranceTravailProvider implements JobBoardProvider {
   readonly name = "FranceTravail";
+  readonly signalSource = "france_travail" as const;
 
   async searchJobs(criteria: JobSearchCriteria): Promise<Result<JobPosting[]>> {
     const start = Date.now();

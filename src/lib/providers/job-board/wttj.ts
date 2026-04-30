@@ -100,6 +100,7 @@ function blocksToPostings({
 
 export class WttjProvider implements JobBoardProvider {
   readonly name = "WTTJ";
+  readonly signalSource = "wttj" as const;
   private readonly client: FirecrawlApp;
 
   constructor() {

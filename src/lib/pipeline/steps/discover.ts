@@ -40,7 +40,7 @@ async function runJobBoardSources({
     providers.map((provider) =>
       provider.searchJobs(jobCriteria).then((result) => ({
         result,
-        providerName: provider.name as SignalSource,
+        signalSource: provider.signalSource,
       })),
     ),
   );
@@ -50,7 +50,7 @@ async function runJobBoardSources({
       postings.push(
         ...settlement.value.result.data.map((posting) => ({
           ...posting,
-          source: settlement.value.providerName,
+          source: settlement.value.signalSource,
         })),
       );
     }

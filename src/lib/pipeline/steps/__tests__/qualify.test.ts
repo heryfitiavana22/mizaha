@@ -1,23 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
-import type { QualifiedCompany } from "@/types";
+import type {
+  QualifiedCompany,
+  QualifiedJobOffer,
+  SearchCriteria,
+} from "@/types";
 import { qualify } from "@/lib/pipeline/steps/qualify";
 import { fakeCompany } from "@/tests/fixtures/company";
+import { fakeJobPosting } from "@/tests/fixtures/job-posting";
 import { fakeCriteria } from "@/tests/fixtures/search";
 import {
   makeMockLLMProvider,
   makeMockScraperProvider,
 } from "@/tests/mocks/providers";
 
-describe("qualify", () => {
-  it("returns qualified companies", async () => {
-    const scraper = makeMockScraperProvider();
-    const llm = makeMockLLMProvider();
+const criteriaJobOffer: SearchCriteria = {
+  ...fakeCriteria,
+  targetEntity: "job_offer",
+};
 
+describe("qualify — company mode", () => {
+  it("returns qualified companies above the score threshold", async () => {
     const result = await qualify({
       entities: [fakeCompany],
       criteria: fakeCriteria,
-      scraper,
-      llm,
+      scraper: makeMockScraperProvider(),
+      llm: makeMockLLMProvider(),
     });
 
     expect(result.success).toBe(true);
@@ -26,17 +33,15 @@ describe("qualify", () => {
     expect(result.data[0].qualification.score).toBe(0.85);
   });
 
-  it("skips company when scrape fails (error level 3) — continues with others", async () => {
+  it("skips company when scrape fails for all pages — continues with others", async () => {
     const anotherCompany = { ...fakeCompany, domain: "beta.fr", name: "Beta" };
     const scraper = makeMockScraperProvider({
-      // scrapeWithFallback tries up to 9 URLs per company — fail all acme.fr, succeed for beta.fr
       scrape: vi.fn().mockImplementation((url: string) => {
-        if (url.includes("acme.fr")) {
+        if (url.includes("acme.fr"))
           return Promise.resolve({
             success: false,
             error: new Error("Timeout"),
           });
-        }
         return Promise.resolve({
           success: true,
           data: {
@@ -49,24 +54,21 @@ describe("qualify", () => {
         });
       }),
     });
-    const llm = makeMockLLMProvider();
 
     const result = await qualify({
       entities: [fakeCompany, anotherCompany],
       criteria: fakeCriteria,
       scraper,
-      llm,
+      llm: makeMockLLMProvider(),
     });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    // First company scrape failed — skipped; second is returned
     expect(result.data).toHaveLength(1);
     expect((result.data as QualifiedCompany[])[0].domain).toBe("beta.fr");
   });
 
-  it("skips company when llm qualify fails", async () => {
-    const scraper = makeMockScraperProvider();
+  it("skips company when LLM qualification fails", async () => {
     const llm = makeMockLLMProvider({
       qualify: vi
         .fn()
@@ -76,7 +78,7 @@ describe("qualify", () => {
     const result = await qualify({
       entities: [fakeCompany],
       criteria: fakeCriteria,
-      scraper,
+      scraper: makeMockScraperProvider(),
       llm,
     });
 
@@ -85,7 +87,27 @@ describe("qualify", () => {
     expect(result.data).toHaveLength(0);
   });
 
-  it("returns empty list when no companies are provided", async () => {
+  it("filters out companies below the 0.5 score threshold", async () => {
+    const llm = makeMockLLMProvider({
+      qualify: vi.fn().mockResolvedValue({
+        success: true,
+        data: { score: 0.3, reason: "Not relevant", matchedCriteria: [] },
+      }),
+    });
+
+    const result = await qualify({
+      entities: [fakeCompany],
+      criteria: fakeCriteria,
+      scraper: makeMockScraperProvider(),
+      llm,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(0);
+  });
+
+  it("returns empty list when no entities are provided", async () => {
     const result = await qualify({
       entities: [],
       criteria: fakeCriteria,
@@ -94,5 +116,64 @@ describe("qualify", () => {
     });
 
     expect(result).toEqual({ success: true, data: [] });
+  });
+});
+
+describe("qualify — job_offer mode", () => {
+  it("returns qualified job offers using description as content — no scraper call", async () => {
+    const scraper = makeMockScraperProvider();
+
+    const result = await qualify({
+      entities: [fakeJobPosting],
+      criteria: criteriaJobOffer,
+      scraper,
+      llm: makeMockLLMProvider(),
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(1);
+    const offer = (result.data as QualifiedJobOffer[])[0];
+    expect(offer.scrapedContent).toBe(fakeJobPosting.description);
+    expect(scraper.scrape).not.toHaveBeenCalled();
+  });
+
+  it("skips job offer when LLM qualification fails", async () => {
+    const llm = makeMockLLMProvider({
+      qualify: vi
+        .fn()
+        .mockResolvedValue({ success: false, error: new Error("LLM down") }),
+    });
+
+    const result = await qualify({
+      entities: [fakeJobPosting],
+      criteria: criteriaJobOffer,
+      scraper: makeMockScraperProvider(),
+      llm,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(0);
+  });
+
+  it("filters out job offers below the 0.5 score threshold", async () => {
+    const llm = makeMockLLMProvider({
+      qualify: vi.fn().mockResolvedValue({
+        success: true,
+        data: { score: 0.2, reason: "Not matching", matchedCriteria: [] },
+      }),
+    });
+
+    const result = await qualify({
+      entities: [fakeJobPosting],
+      criteria: criteriaJobOffer,
+      scraper: makeMockScraperProvider(),
+      llm,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(0);
   });
 });
