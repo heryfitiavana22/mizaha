@@ -65,7 +65,7 @@
 
 ## Phase 1 — Types (foundation — do this first)
 
-- [ ] **UPDATE** `src/types/index.ts`
+- [x] **UPDATE** `src/types/index.ts`
   - Add `targetEntity: "company" | "job_offer"` to `SearchCriteria`
   - Add `signalSources: SignalSource[]` to `SearchCriteria`
   - Replace `signals: string[]` with `searchStrategies: string[]` in `SearchCriteria`
