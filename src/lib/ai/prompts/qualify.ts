@@ -22,7 +22,7 @@ export const qualificationResultSchema = z.object({
 const MAX_SCRAPED_CONTENT_CHARS = 4000;
 
 export function buildQualifyPrompt({
-  company,
+  entity,
   criteria,
   scrapedContent,
 }: QualifyInput): string {
@@ -40,23 +40,33 @@ export function buildQualifyPrompt({
     .map((c, i) => `${i + 1}. ${c}`)
     .join("\n");
 
-  return `You are a B2B lead qualification assistant. Evaluate how well this company matches the search criteria.
+  const isCompany = "domain" in entity;
+  const entityDescription = isCompany
+    ? `Company:
+- Name: ${entity.name}
+- Domain: ${entity.domain}
+- Sector: ${entity.sector || "unknown"}
+- Location: ${entity.location || "unknown"}
+${entity.employeeCount ? `- Employees: ${entity.employeeCount}` : ""}`
+    : `Job offer:
+- Title: ${entity.title}
+- Company: ${entity.companyName}
+- Location: ${entity.location}
+- Contract: ${entity.contractType}
+${entity.techStack?.length ? `- Tech stack: ${entity.techStack.join(", ")}` : ""}`;
 
-Company:
-- Name: ${company.name}
-- Domain: ${company.domain}
-- Sector: ${company.sector || "unknown"}
-- Location: ${company.location || "unknown"}
-${company.employeeCount ? `- Employees: ${company.employeeCount}` : ""}
+  return `You are a B2B lead qualification assistant. Evaluate how well this entity matches the search criteria.
+
+${entityDescription}
 
 Search criteria:
 - Sector: ${criteria.sector ?? "any"}
 - Location: ${criteria.location ?? "France"}${techLine}${rangeLine}${personaLine}
 
-Criteria to verify on this website:
+Criteria to verify:
 ${criteriaList}
 
-Website content (extract):
+Content (extract):
 ${scrapedContent.slice(0, MAX_SCRAPED_CONTENT_CHARS)}
 
 Scoring guide:
@@ -65,6 +75,6 @@ Scoring guide:
 - 0.7–0.9: strong match, most criteria confirmed
 - 1.0: perfect match
 
-Only list criteria in matchedCriteria that are clearly confirmed by the website content.
+Only list criteria in matchedCriteria that are clearly confirmed by the content.
 Write the reason in French — it will be displayed directly to the user.`;
 }

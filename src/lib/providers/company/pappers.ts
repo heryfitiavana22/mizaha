@@ -99,6 +99,43 @@ export class PappersCompanyProvider implements CompanyProvider {
     }
   }
 
+  async findByName(name: string): Promise<Result<CompanyData | null>> {
+    const start = Date.now();
+    try {
+      const data = await fetchEntreprises({
+        query: name,
+        apiToken: env.PAPPERS_API_KEY,
+      });
+      const first =
+        (data.resultats ?? []).map(toCompanyData).find(Boolean) ?? null;
+
+      logger.info(
+        {
+          provider: "pappers",
+          method: "findByName",
+          durationMs: Date.now() - start,
+          status: "success",
+        },
+        "API call completed",
+      );
+
+      return { success: true, data: first };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error(
+        {
+          provider: "pappers",
+          method: "findByName",
+          durationMs: Date.now() - start,
+          status: "error",
+          error: err.message,
+        },
+        "API call failed",
+      );
+      return { success: false, error: err };
+    }
+  }
+
   async search(criteria: CompanyCriteria): Promise<Result<CompanyData[]>> {
     const start = Date.now();
     const query = [criteria.sector, criteria.location]

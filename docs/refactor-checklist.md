@@ -79,16 +79,16 @@
 
 ## Phase 2 — Provider Interfaces
 
-- [ ] **ADD** `src/lib/providers/interfaces/job-board.ts`
+- [x] **ADD** `src/lib/providers/interfaces/job-board.ts`
   - `JobBoardProvider` interface with `searchJobs(criteria: JobSearchCriteria)`
   - `JobSearchCriteria` type
   - See `docs/providers.md` for the exact definition
 
-- [ ] **UPDATE** `src/lib/providers/interfaces/company.ts`
+- [x] **UPDATE** `src/lib/providers/interfaces/company.ts`
   - Add `findByName(name: string): Promise<Result<CompanyData | null>>`
   - This is critical — used to resolve company name → domain after job board discovery
 
-- [ ] **UPDATE** `src/lib/providers/interfaces/llm.ts`
+- [x] **UPDATE** `src/lib/providers/interfaces/llm.ts`
   - Add `extractCompanyNames(results: SearchResult[]): Promise<Result<string[]>>`
   - Update `QualifyInput`: `entity` must accept both `CompanyData` and `JobPosting`
   - `scrapedContent` must be mandatory (not optional) in `QualifyInput`

@@ -82,7 +82,9 @@ export class VercelLLMProvider implements LLMProvider {
     }
   }
 
-  async extractCompanies(results: SearchResult[]): Promise<Result<string[]>> {
+  async extractCompanyNames(
+    results: SearchResult[],
+  ): Promise<Result<string[]>> {
     const start = Date.now();
 
     try {
@@ -96,7 +98,7 @@ export class VercelLLMProvider implements LLMProvider {
       logger.info(
         {
           provider: this.modelName,
-          method: "extractCompanies",
+          method: "extractCompanyNames",
           durationMs: Date.now() - start,
           status: "success",
           count: output.companies.length,
@@ -110,7 +112,7 @@ export class VercelLLMProvider implements LLMProvider {
       logger.error(
         {
           provider: this.modelName,
-          method: "extractCompanies",
+          method: "extractCompanyNames",
           durationMs: Date.now() - start,
           status: "error",
           error: err.message,
@@ -122,7 +124,7 @@ export class VercelLLMProvider implements LLMProvider {
   }
 
   async qualify({
-    company,
+    entity,
     criteria,
     scrapedContent,
   }: QualifyInput): Promise<Result<QualificationResult>> {
@@ -133,7 +135,7 @@ export class VercelLLMProvider implements LLMProvider {
         model: this.model,
         output: Output.object({ schema: qualificationResultSchema }),
         maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
-        prompt: buildQualifyPrompt({ company, criteria, scrapedContent }),
+        prompt: buildQualifyPrompt({ entity, criteria, scrapedContent }),
       });
 
       logger.info(

@@ -80,7 +80,7 @@ async function qualifyOne({
   }
 
   const qualifyResult = await llm.qualify({
-    company,
+    entity: company,
     criteria,
     scrapedContent: scraped.content,
   });

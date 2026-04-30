@@ -178,11 +178,11 @@ export async function discover({
     return { success: true, data: [] };
   }
 
-  const extractResult = await llm.extractCompanies(allResults);
+  const extractResult = await llm.extractCompanyNames(allResults);
   if (!extractResult.success) {
     logger.warn(
       { error: extractResult.error.message },
-      "discover: extractCompanies failed — returning empty",
+      "discover: extractCompanyNames failed — returning empty",
     );
     return { success: true, data: [] };
   }

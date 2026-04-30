@@ -30,6 +30,7 @@ export function makeMockCompanyProvider(
     findByDomain: vi
       .fn()
       .mockResolvedValue({ success: true, data: fakeCompany }),
+    findByName: vi.fn().mockResolvedValue({ success: true, data: fakeCompany }),
     search: vi.fn().mockResolvedValue({ success: true, data: [fakeCompany] }),
     ...overrides,
   };
@@ -83,7 +84,7 @@ export function makeMockLLMProvider(
     extractCriteria: vi
       .fn()
       .mockResolvedValue({ success: true, data: fakeCriteria }),
-    extractCompanies: vi
+    extractCompanyNames: vi
       .fn()
       .mockResolvedValue({ success: true, data: ["Acme SAS"] }),
     qualify: vi.fn().mockResolvedValue({

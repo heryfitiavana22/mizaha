@@ -97,6 +97,40 @@ export class SireneCompanyProvider implements CompanyProvider {
     }
   }
 
+  async findByName(name: string): Promise<Result<CompanyData | null>> {
+    const start = Date.now();
+    try {
+      const data = await fetchSirene({ query: name });
+      const first =
+        (data.results ?? []).map(toCompanyData).find(Boolean) ?? null;
+
+      logger.info(
+        {
+          provider: "sirene",
+          method: "findByName",
+          durationMs: Date.now() - start,
+          status: "success",
+        },
+        "API call completed",
+      );
+
+      return { success: true, data: first };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error(
+        {
+          provider: "sirene",
+          method: "findByName",
+          durationMs: Date.now() - start,
+          status: "error",
+          error: err.message,
+        },
+        "API call failed",
+      );
+      return { success: false, error: err };
+    }
+  }
+
   async search(criteria: CompanyCriteria): Promise<Result<CompanyData[]>> {
     const start = Date.now();
     const query = [criteria.sector, criteria.location]

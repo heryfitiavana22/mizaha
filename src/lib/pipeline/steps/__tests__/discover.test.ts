@@ -41,7 +41,9 @@ describe("discover", () => {
 
   it("returns empty when LLM extracts no companies", async () => {
     const llm = makeMockLLMProvider({
-      extractCompanies: vi.fn().mockResolvedValue({ success: true, data: [] }),
+      extractCompanyNames: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: [] }),
     });
 
     const result = await discover({
@@ -58,7 +60,7 @@ describe("discover", () => {
 
   it("deduplicates companies that resolve to the same domain", async () => {
     const llm = makeMockLLMProvider({
-      extractCompanies: vi
+      extractCompanyNames: vi
         .fn()
         .mockResolvedValue({ success: true, data: ["Acme SAS", "Acme"] }),
     });

@@ -1,6 +1,7 @@
 import type {
   CompanyData,
   Contact,
+  JobPosting,
   QualificationResult,
   Result,
   SearchCriteria,
@@ -14,9 +15,9 @@ export type ExtractCriteriaInput = {
 };
 
 export type QualifyInput = {
-  company: CompanyData;
+  entity: CompanyData | JobPosting;
   criteria: SearchCriteria;
-  scrapedContent: string;
+  scrapedContent: string; // mandatory — we never qualify without content
 };
 
 export type GenerateDraftInput = {
@@ -27,7 +28,7 @@ export type GenerateDraftInput = {
 export interface LLMProvider {
   readonly name: string;
   extractCriteria(input: ExtractCriteriaInput): Promise<Result<SearchCriteria>>;
-  extractCompanies(results: SearchResult[]): Promise<Result<string[]>>;
+  extractCompanyNames(results: SearchResult[]): Promise<Result<string[]>>;
   qualify(input: QualifyInput): Promise<Result<QualificationResult>>;
   generateDraft(input: GenerateDraftInput): Promise<Result<string>>;
 }
