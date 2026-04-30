@@ -40,7 +40,7 @@
 
 ## Phase 0 — Prerequisites (do before anything else)
 
-- [ ] **REWRITE** `src/lib/db/schema.ts`
+- [x] **REWRITE** `src/lib/db/schema.ts`
   - Remove: `companies`, `search_companies`, `company_embeddings`, `company_tags`, `user_company_interactions`
   - Add: `entities` table — `(id, type, dedup_key, data jsonb, enriched_at, created_at)` + `UNIQUE(type, dedup_key)`
   - Add: `search_results` table — `(id, search_id FK → searches, entity_id FK → entities, score, reason, status, created_at)`
@@ -52,13 +52,13 @@
   - Update: `result_feedback` — `search_result_id FK → search_results`
   - Run `pnpm drizzle-kit generate` + `pnpm drizzle-kit migrate` (wipe dev data — we're in dev)
 
-- [ ] **UPDATE** `src/env.ts`
+- [x] **UPDATE** `src/env.ts`
   - Replace `ANTHROPIC_API_KEY` → `OPENAI_API_KEY`
   - Remove `HUNTER_API_KEY`
   - Add `FRANCE_TRAVAIL_CLIENT_ID: z.string().min(1)`
   - Add `FRANCE_TRAVAIL_CLIENT_SECRET: z.string().min(1)`
 
-- [ ] **UPDATE** `.env.example`
+- [x] **UPDATE** `.env.example`
   - Same changes as `src/env.ts` above
 
 ---
