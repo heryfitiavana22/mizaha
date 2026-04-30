@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { CompanyData } from "@/types";
 import { discover } from "@/lib/pipeline/steps/discover";
 import { fakeCompany } from "@/tests/fixtures/company";
 import { fakeCriteria } from "@/tests/fixtures/search";
@@ -20,7 +21,7 @@ describe("discover", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].domain).toBe(fakeCompany.domain);
+    expect((result.data as CompanyData[])[0].domain).toBe(fakeCompany.domain);
   });
 
   it("returns failure when all search strategies fail", async () => {
@@ -92,7 +93,7 @@ describe("discover", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].domain).toBe("acme.fr");
+    expect((result.data as CompanyData[])[0].domain).toBe("acme.fr");
   });
 
   it("uses searchStrategies from criteria as search queries", async () => {

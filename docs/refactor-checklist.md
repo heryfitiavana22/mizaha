@@ -211,7 +211,7 @@
 
 ## Phase 7 — Pipeline Orchestrator
 
-- [ ] **UPDATE** `src/lib/pipeline/index.ts`
+- [x] **UPDATE** `src/lib/pipeline/index.ts`
   - Pass `jobBoard` provider to `discover()`
   - Handle both `CompanyData[]` and `JobPosting[]` return types from discover
   - DB writes: all results go to `search_results` with `entity_type` set correctly

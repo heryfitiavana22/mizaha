@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import {
-  companies as companiesTable,
   contacts as contactsTable,
+  entities as entitiesTable,
   pipelineRuns as pipelineRunsTable,
-  searchCompanies as searchCompaniesTable,
+  searchResults as searchResultsTable,
   searches as searchesTable,
 } from "@/lib/db/schema";
 import logger from "@/lib/logger";
@@ -32,41 +32,35 @@ async function fetchSearch({
   }
 }
 
-async function fetchCompanyRows({ searchId }: { searchId: string }): Promise<
+async function fetchSearchResults({ searchId }: { searchId: string }): Promise<
   Result<
     {
-      relevanceScore: number;
-      relevanceReason: string;
-      companyId: string;
-      name: string;
-      domain: string;
-      sector: string | null;
-      location: string | null;
-      employeeCount: number | null;
-      techStack: unknown;
+      entityId: string;
+      score: number;
+      reason: string;
+      status: string | null;
+      type: string;
+      data: unknown;
     }[]
   >
 > {
   try {
     const rows = await db
       .select({
-        relevanceScore: searchCompaniesTable.relevanceScore,
-        relevanceReason: searchCompaniesTable.relevanceReason,
-        companyId: companiesTable.id,
-        name: companiesTable.name,
-        domain: companiesTable.domain,
-        sector: companiesTable.sector,
-        location: companiesTable.location,
-        employeeCount: companiesTable.employeeCount,
-        techStack: companiesTable.techStack,
+        entityId: searchResultsTable.entityId,
+        score: searchResultsTable.score,
+        reason: searchResultsTable.reason,
+        status: searchResultsTable.status,
+        type: entitiesTable.type,
+        data: entitiesTable.data,
       })
-      .from(searchCompaniesTable)
+      .from(searchResultsTable)
       .innerJoin(
-        companiesTable,
-        eq(searchCompaniesTable.companyId, companiesTable.id),
+        entitiesTable,
+        eq(searchResultsTable.entityId, entitiesTable.id),
       )
-      .where(eq(searchCompaniesTable.searchId, searchId))
-      .orderBy(desc(searchCompaniesTable.relevanceScore));
+      .where(eq(searchResultsTable.searchId, searchId))
+      .orderBy(desc(searchResultsTable.score));
     return { success: true, data: rows };
   } catch (error) {
     return { success: false, error: toError(error) };
@@ -91,16 +85,16 @@ async function fetchPipelineRuns({
 }
 
 async function fetchContacts({
-  companyIds,
+  entityIds,
 }: {
-  companyIds: string[];
+  entityIds: string[];
 }): Promise<Result<(typeof contactsTable.$inferSelect)[]>> {
-  if (companyIds.length === 0) return { success: true, data: [] };
+  if (entityIds.length === 0) return { success: true, data: [] };
   try {
     const rows = await db
       .select()
       .from(contactsTable)
-      .where(inArray(contactsTable.companyId, companyIds));
+      .where(inArray(contactsTable.entityId, entityIds));
     return { success: true, data: rows };
   } catch (error) {
     return { success: false, error: toError(error) };
@@ -125,17 +119,17 @@ export async function GET(
     return Response.json({ error: "Search not found" }, { status: 404 });
   }
 
-  const companyRowsResult = await fetchCompanyRows({ searchId: id });
-  if (!companyRowsResult.success) {
+  const searchResultsResult = await fetchSearchResults({ searchId: id });
+  if (!searchResultsResult.success) {
     logger.error(
-      { searchId: id, error: companyRowsResult.error.message },
-      "Failed to fetch companies",
+      { searchId: id, error: searchResultsResult.error.message },
+      "Failed to fetch search results",
     );
     return Response.json({ error: "Database unavailable" }, { status: 503 });
   }
 
-  const companyIds = companyRowsResult.data.map((row) => row.companyId);
-  const contactsResult = await fetchContacts({ companyIds });
+  const entityIds = searchResultsResult.data.map((row) => row.entityId);
+  const contactsResult = await fetchContacts({ entityIds });
   if (!contactsResult.success) {
     logger.error(
       { searchId: id, error: contactsResult.error.message },
@@ -153,10 +147,10 @@ export async function GET(
     return Response.json({ error: "Database unavailable" }, { status: 503 });
   }
 
-  const results = companyRowsResult.data.map((row) => ({
+  const results = searchResultsResult.data.map((row) => ({
     ...row,
     contacts: contactsResult.data.filter(
-      (contact) => contact.companyId === row.companyId,
+      (contact) => contact.entityId === row.entityId,
     ),
   }));
 

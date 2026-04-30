@@ -1,18 +1,18 @@
 import { db } from "@/lib/db";
 import {
-  companies,
   contacts,
   dataSources,
+  entities,
   pipelineRuns,
-  searchCompanies,
+  searchResults,
   searches,
 } from "@/lib/db/schema";
 
 export async function resetTestDb(): Promise<void> {
   await db.delete(dataSources);
   await db.delete(contacts);
-  await db.delete(searchCompanies);
+  await db.delete(searchResults);
   await db.delete(pipelineRuns);
   await db.delete(searches);
-  await db.delete(companies);
+  await db.delete(entities);
 }

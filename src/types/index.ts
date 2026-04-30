@@ -15,6 +15,15 @@ export type SearchResult = {
 };
 
 // ---------------------------------------------------------------------------
+// LLM / Search criteria
+// ---------------------------------------------------------------------------
+export type SignalSource =
+  | "france_travail"
+  | "wttj"
+  | "pappers_search"
+  | "brave";
+
+// ---------------------------------------------------------------------------
 // Company
 // ---------------------------------------------------------------------------
 export type CompanyData = {
@@ -25,6 +34,7 @@ export type CompanyData = {
   employeeCount?: number;
   legalForm?: string;
   foundedAt?: string;
+  source?: SignalSource;
 };
 
 // ---------------------------------------------------------------------------
@@ -40,6 +50,7 @@ export type JobPosting = {
   description: string;
   url: string;
   postedAt?: string;
+  source?: SignalSource;
 };
 
 // ---------------------------------------------------------------------------
@@ -52,15 +63,6 @@ export type Contact = {
   confidence: number; // 0-100
   linkedinUrl?: string;
 };
-
-// ---------------------------------------------------------------------------
-// LLM
-// ---------------------------------------------------------------------------
-export type SignalSource =
-  | "france_travail"
-  | "wttj"
-  | "pappers_search"
-  | "brave";
 
 export type SearchCriteria = {
   targetEntity: "company" | "job_offer";

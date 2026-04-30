@@ -1,23 +1,27 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
-  companies as companiesTable,
   contacts as contactsTable,
   dataSources as dataSourcesTable,
+  entities as entitiesTable,
   pipelineRuns as pipelineRunsTable,
-  searchCompanies as searchCompaniesTable,
   searches as searchesTable,
+  searchResults as searchResultsTable,
 } from "@/lib/db/schema";
 import logger from "@/lib/logger";
 import type { UseCaseProviders } from "@/lib/use-cases";
 import { getUseCase } from "@/lib/use-cases";
+import type { JobBoardProvider } from "@/lib/providers/interfaces/job-board";
 import type { CompanyProvider } from "@/lib/providers/interfaces/company";
-import type { Result } from "@/types";
 import type {
   CompanyData,
   Contact,
   EnrichedCompany,
+  EnrichedJobOffer,
+  JobPosting,
   QualifiedCompany,
+  QualifiedJobOffer,
+  Result,
   SearchCriteria,
 } from "@/types";
 import { discover } from "./steps/discover";
@@ -25,9 +29,6 @@ import { enrich } from "./steps/enrich";
 import { extractCriteria } from "./steps/extract-criteria";
 import { qualify } from "./steps/qualify";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 type PipelineStep = "extract-criteria" | "discover" | "qualify" | "enrich";
 type SearchStatus = "pending" | "running" | "completed" | "failed";
 type StepRunRecord = { runId: string; start: number };
@@ -37,11 +38,14 @@ type RunPipelineOptions = {
   useCaseName: string;
 };
 
-const PIPELINE_PROVIDER_NAME = "pipeline";
+type ExecutePipelineOptions = {
+  searchId: string;
+  useCaseName: string;
+  rawQuery: string;
+  providers: UseCaseProviders;
+  uiCriteria?: Record<string, unknown>;
+};
 
-// ---------------------------------------------------------------------------
-// DB helpers — all return Result<T>, never throw
-// ---------------------------------------------------------------------------
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -101,7 +105,7 @@ async function startStepRun({
 }: {
   searchId: string;
   step: PipelineStep;
-  inputData?: Record<string, unknown>;
+  inputData?: unknown;
 }): Promise<Result<StepRunRecord>> {
   try {
     const start = Date.now();
@@ -111,7 +115,7 @@ async function startStepRun({
         searchId,
         step,
         status: "running",
-        inputData: inputData ?? null,
+        inputData: inputData as Record<string, unknown> | undefined,
       })
       .returning({ id: pipelineRunsTable.id });
     return { success: true, data: { runId: run.id, start } };
@@ -127,7 +131,7 @@ async function completeStepRun({
 }: {
   runId: string;
   start: number;
-  outputData?: Record<string, unknown>;
+  outputData?: unknown;
 }): Promise<Result<undefined>> {
   try {
     await db
@@ -135,7 +139,7 @@ async function completeStepRun({
       .set({
         status: "completed",
         durationMs: Date.now() - start,
-        outputData: outputData ?? null,
+        outputData: outputData as Record<string, unknown> | undefined,
       })
       .where(eq(pipelineRunsTable.id, runId));
     return { success: true, data: undefined };
@@ -164,59 +168,85 @@ async function failStepRun({
   }
 }
 
-async function upsertCompany({
-  company,
+async function upsertEntity({
+  type,
+  dedupKey,
+  data,
 }: {
-  company: CompanyData;
+  type: "company" | "job_offer";
+  dedupKey: string;
+  data: Record<string, unknown>;
 }): Promise<Result<string>> {
   try {
     const [row] = await db
-      .insert(companiesTable)
-      .values({
-        name: company.name,
-        domain: company.domain,
-        sector: company.sector,
-        location: company.location,
-        employeeCount: company.employeeCount,
-        lastScrapedAt: new Date(),
-      })
+      .insert(entitiesTable)
+      .values({ type, dedupKey, data })
       .onConflictDoUpdate({
-        target: companiesTable.domain,
-        set: {
-          name: company.name,
-          sector: company.sector || null,
-          location: company.location || null,
-          employeeCount: company.employeeCount ?? null,
-          lastScrapedAt: new Date(),
-        },
+        target: [entitiesTable.type, entitiesTable.dedupKey],
+        set: { data, enrichedAt: new Date() },
       })
-      .returning({ id: companiesTable.id });
+      .returning({ id: entitiesTable.id });
     return { success: true, data: row.id };
   } catch (error) {
     return { success: false, error: toError(error) };
   }
 }
 
+async function saveSearchResult({
+  searchId,
+  entityId,
+  score,
+  reason,
+}: {
+  searchId: string;
+  entityId: string;
+  score: number;
+  reason: string;
+}): Promise<Result<undefined>> {
+  try {
+    await db
+      .insert(searchResultsTable)
+      .values({ searchId, entityId, score, reason });
+    return { success: true, data: undefined };
+  } catch (error) {
+    return { success: false, error: toError(error) };
+  }
+}
+
+async function saveDataSource({
+  entityId,
+  providerName,
+  rawData,
+}: {
+  entityId: string;
+  providerName: string;
+  rawData: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await db
+      .insert(dataSourcesTable)
+      .values({ entityId, providerName, rawData });
+  } catch (error) {
+    logger.error(
+      { entityId, providerName, error: toError(error).message },
+      "Failed to save data source",
+    );
+  }
+}
+
 async function saveContacts({
-  companyId,
+  entityId,
   contacts,
 }: {
-  companyId: string;
+  entityId: string;
   contacts: Contact[];
 }): Promise<Result<undefined>> {
   try {
-    const seenEmails = new Set<string>();
-    const toInsert = contacts.filter((contact) => {
-      if (!contact.name) return false; // name is notNull in DB schema
-      if (seenEmails.has(contact.email)) return false;
-      seenEmails.add(contact.email);
-      return true;
-    });
-
+    const validContacts = contacts.filter((contact) => Boolean(contact.name));
     await Promise.allSettled(
-      toInsert.map((contact) =>
+      validContacts.map((contact) =>
         db.insert(contactsTable).values({
-          companyId,
+          entityId,
           name: contact.name!,
           title: contact.title,
           email: contact.email,
@@ -224,7 +254,6 @@ async function saveContacts({
         }),
       ),
     );
-
     return { success: true, data: undefined };
   } catch (error) {
     return { success: false, error: toError(error) };
@@ -238,63 +267,106 @@ async function saveOneCompany({
   searchId: string;
   company: EnrichedCompany;
 }): Promise<Result<undefined>> {
-  try {
-    const companyResult = await upsertCompany({ company });
-    if (!companyResult.success) return companyResult;
-    const companyId = companyResult.data;
+  const entityResult = await upsertEntity({
+    type: "company",
+    dedupKey: company.domain,
+    data: company as unknown as Record<string, unknown>,
+  });
+  if (!entityResult.success) return entityResult;
 
-    await db.insert(searchCompaniesTable).values({
-      searchId,
-      companyId,
-      relevanceScore: company.qualification.score,
-      relevanceReason: company.qualification.reason,
-    });
+  await saveSearchResult({
+    searchId,
+    entityId: entityResult.data,
+    score: company.qualification.score,
+    reason: company.qualification.reason,
+  });
 
-    const contactsResult = await saveContacts({
-      companyId,
-      contacts: company.contacts,
-    });
-    if (!contactsResult.success) {
-      logger.error(
-        { companyId, error: contactsResult.error.message },
-        "Failed to save contacts",
-      );
-    }
-
-    await db.insert(dataSourcesTable).values({
-      companyId,
-      providerName: PIPELINE_PROVIDER_NAME,
+  if (company.source) {
+    await saveDataSource({
+      entityId: entityResult.data,
+      providerName: company.source,
       rawData: company as unknown as Record<string, unknown>,
     });
-
-    return { success: true, data: undefined };
-  } catch (error) {
-    return { success: false, error: toError(error) };
   }
+
+  const contactsResult = await saveContacts({
+    entityId: entityResult.data,
+    contacts: company.contacts,
+  });
+  if (!contactsResult.success) {
+    logger.error(
+      { entityId: entityResult.data, error: contactsResult.error.message },
+      "Failed to save contacts",
+    );
+  }
+
+  return { success: true, data: undefined };
+}
+
+async function saveOneJobOffer({
+  searchId,
+  offer,
+}: {
+  searchId: string;
+  offer: EnrichedJobOffer;
+}): Promise<Result<undefined>> {
+  const entityResult = await upsertEntity({
+    type: "job_offer",
+    dedupKey: offer.url,
+    data: offer as unknown as Record<string, unknown>,
+  });
+  if (!entityResult.success) return entityResult;
+
+  await saveSearchResult({
+    searchId,
+    entityId: entityResult.data,
+    score: offer.qualification.score,
+    reason: offer.qualification.reason,
+  });
+
+  if (offer.source) {
+    await saveDataSource({
+      entityId: entityResult.data,
+      providerName: offer.source,
+      rawData: offer as unknown as Record<string, unknown>,
+    });
+  }
+
+  return { success: true, data: undefined };
 }
 
 async function saveResults({
   searchId,
-  companies,
+  results,
+  targetEntity,
 }: {
   searchId: string;
-  companies: EnrichedCompany[];
+  results: EnrichedCompany[] | EnrichedJobOffer[];
+  targetEntity: "company" | "job_offer";
 }): Promise<Result<undefined>> {
-  for (const company of companies) {
-    const result = await saveOneCompany({ searchId, company });
-    if (!result.success) {
-      logger.error(
-        { domain: company.domain, error: result.error.message },
-        "Failed to save company — skipping",
-      );
+  if (targetEntity === "job_offer") {
+    for (const offer of results as EnrichedJobOffer[]) {
+      const result = await saveOneJobOffer({ searchId, offer });
+      if (!result.success)
+        logger.error(
+          { url: offer.url, error: result.error.message },
+          "Failed to save job offer — skipping",
+        );
+    }
+  } else {
+    for (const company of results as EnrichedCompany[]) {
+      const result = await saveOneCompany({ searchId, company });
+      if (!result.success)
+        logger.error(
+          { domain: company.domain, error: result.error.message },
+          "Failed to save company — skipping",
+        );
     }
   }
   return { success: true, data: undefined };
 }
 
-// ---------------------------------------------------------------------------
 // Level 1 — primary provider fails → try backup automatically
-// ---------------------------------------------------------------------------
 async function withFallback<TProvider, TData>({
   primary,
   backup,
@@ -313,81 +385,7 @@ async function withFallback<TProvider, TData>({
   return run(backup);
 }
 
-// ---------------------------------------------------------------------------
-// trackStep — handles pipeline_runs tracking for any step
-// ---------------------------------------------------------------------------
-async function trackStep<TData>({
-  searchId,
-  step,
-  inputData,
-  run,
-  serializeOutput,
-}: {
-  searchId: string;
-  step: PipelineStep;
-  inputData?: Record<string, unknown>;
-  run: () => Promise<Result<TData>>;
-  serializeOutput?: (data: TData) => Record<string, unknown>;
-}): Promise<Result<TData>> {
-  const startResult = await startStepRun({ searchId, step, inputData });
-  if (!startResult.success) {
-    logger.error(
-      { searchId, step, error: startResult.error.message },
-      "Failed to start step tracking",
-    );
-  }
-
-  const result = await run();
-
-  if (startResult.success) {
-    const { runId, start } = startResult.data;
-    if (result.success) {
-      const outputData = serializeOutput
-        ? serializeOutput(result.data)
-        : undefined;
-      await completeStepRun({ runId, start, outputData });
-    } else {
-      await failStepRun({ runId, start, error: result.error.message });
-    }
-  }
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// Step runners — each returns Result<T>
-// ---------------------------------------------------------------------------
-async function runExtractCriteria({
-  searchId,
-  rawQuery,
-  useCaseName,
-  llm,
-  uiCriteria,
-}: {
-  searchId: string;
-  rawQuery: string;
-  useCaseName: string;
-  llm: UseCaseProviders["llm"];
-  uiCriteria?: Record<string, unknown>;
-}): Promise<Result<SearchCriteria>> {
-  return trackStep({
-    searchId,
-    step: "extract-criteria",
-    inputData: {
-      rawQuery,
-      useCase: useCaseName,
-      uiCriteria: uiCriteria ?? {},
-      providers: { llm: llm.name },
-    },
-    run: () =>
-      extractCriteria({ rawQuery, useCase: useCaseName, llm, uiCriteria }),
-    serializeOutput: (criteria) =>
-      criteria as unknown as Record<string, unknown>,
-  });
-}
-
-// Wraps primary + backup into one CompanyProvider so discover() gets
-// per-call fallback without knowing about the two-provider config.
+// Wraps primary + backup into one CompanyProvider so steps get per-call fallback transparently.
 function createFallbackCompanyProvider({
   primary,
   backup,
@@ -428,6 +426,61 @@ function createFallbackCompanyProvider({
   };
 }
 
+async function trackStep<TData>({
+  searchId,
+  step,
+  inputData,
+  run,
+}: {
+  searchId: string;
+  step: PipelineStep;
+  inputData?: unknown;
+  run: () => Promise<Result<TData>>;
+}): Promise<Result<TData>> {
+  const startResult = await startStepRun({ searchId, step, inputData });
+  if (!startResult.success) {
+    logger.error(
+      { searchId, step, error: startResult.error.message },
+      "Failed to start step tracking",
+    );
+  }
+
+  const result = await run();
+
+  if (startResult.success) {
+    const { runId, start } = startResult.data;
+    if (result.success) {
+      await completeStepRun({ runId, start, outputData: result.data });
+    } else {
+      await failStepRun({ runId, start, error: result.error.message });
+    }
+  }
+
+  return result;
+}
+
+async function runExtractCriteria({
+  searchId,
+  rawQuery,
+  useCaseName,
+  llm,
+  uiCriteria,
+}: {
+  searchId: string;
+  rawQuery: string;
+  useCaseName: string;
+  llm: UseCaseProviders["llm"];
+  uiCriteria?: Record<string, unknown>;
+}): Promise<Result<SearchCriteria>> {
+  return trackStep({
+    searchId,
+    step: "extract-criteria",
+    inputData: { rawQuery, uiCriteria },
+    run: () =>
+      extractCriteria({ rawQuery, useCase: useCaseName, llm, uiCriteria }),
+  });
+}
+
 async function runDiscover({
   searchId,
   criteria,
@@ -436,132 +489,96 @@ async function runDiscover({
   searchId: string;
   criteria: SearchCriteria;
   providers: UseCaseProviders;
-}): Promise<Result<CompanyData[]>> {
+}): Promise<Result<CompanyData[] | JobPosting[]>> {
   const company = createFallbackCompanyProvider({
     primary: providers.company.primary,
     backup: providers.company.backup,
   });
-  let usedSearchFallback = false;
+  const jobBoardProviders = [
+    providers.jobBoard?.primary,
+    providers.jobBoard?.backup,
+  ].filter((provider): provider is JobBoardProvider => provider !== undefined);
+
   return trackStep({
     searchId,
     step: "discover",
     inputData: {
-      ...(criteria as unknown as Record<string, unknown>),
-      providers: {
-        search: providers.search.primary.name,
-        searchBackup: providers.search.backup?.name ?? null,
-        company: providers.company.primary.name,
-        companyBackup: providers.company.backup?.name ?? null,
-      },
+      signalSources: criteria.signalSources,
+      targetEntity: criteria.targetEntity,
     },
     run: () =>
       withFallback({
         primary: providers.search.primary,
         backup: providers.search.backup,
         run: (search) =>
-          discover({ criteria, search, company, llm: providers.llm }),
-        onFallback: () => {
-          usedSearchFallback = true;
-        },
+          discover({
+            criteria,
+            search,
+            company,
+            llm: providers.llm,
+            jobBoardProviders,
+          }),
       }),
-    serializeOutput: (companies) => ({
-      count: companies.length,
-      usedSearchFallback,
-      companies: companies.map((c) => ({
-        name: c.name,
-        domain: c.domain,
-        sector: c.sector,
-        location: c.location,
-        employeeCount: c.employeeCount ?? null,
-      })),
-    }),
   });
 }
 
 async function runQualify({
   searchId,
-  companies,
+  entities,
   criteria,
   providers,
 }: {
   searchId: string;
-  companies: CompanyData[];
+  entities: CompanyData[] | JobPosting[];
   criteria: SearchCriteria;
   providers: UseCaseProviders;
-}): Promise<Result<QualifiedCompany[]>> {
+}): Promise<Result<QualifiedCompany[] | QualifiedJobOffer[]>> {
   return trackStep({
     searchId,
     step: "qualify",
     inputData: {
-      count: companies.length,
-      companies: companies.map((c) => ({ name: c.name, domain: c.domain })),
-      providers: {
-        scraper: providers.scraper.primary.name,
-        scraperBackup: providers.scraper.backup?.name ?? null,
-        llm: providers.llm.name,
-      },
+      entityCount: entities.length,
+      targetEntity: criteria.targetEntity,
     },
     run: () =>
       qualify({
-        companies,
+        entities,
         criteria,
         scraper: providers.scraper.primary,
         llm: providers.llm,
       }),
-    serializeOutput: (qualified) => ({
-      count: qualified.length,
-      companies: qualified.map((c) => ({
-        name: c.name,
-        domain: c.domain,
-        score: c.qualification.score,
-        reason: c.qualification.reason,
-        matchedCriteria: c.qualification.matchedCriteria,
-      })),
-    }),
   });
 }
 
 async function runEnrich({
   searchId,
-  companies,
+  entities,
   providers,
+  targetEntity,
 }: {
   searchId: string;
-  companies: QualifiedCompany[];
+  entities: QualifiedCompany[] | QualifiedJobOffer[];
   providers: UseCaseProviders;
-}): Promise<Result<EnrichedCompany[]>> {
+  targetEntity: "company" | "job_offer";
+}): Promise<Result<EnrichedCompany[] | EnrichedJobOffer[]>> {
+  const company = createFallbackCompanyProvider({
+    primary: providers.company.primary,
+    backup: providers.company.backup,
+  });
   return trackStep({
     searchId,
     step: "enrich",
-    inputData: {
-      count: companies.length,
-      companies: companies.map((c) => ({
-        name: c.name,
-        domain: c.domain,
-        score: c.qualification.score,
-      })),
-      providers: { email: providers.email.primary.name },
-    },
-    run: () => enrich({ companies, email: providers.email.primary }),
-    serializeOutput: (enriched) => ({
-      count: enriched.length,
-      companies: enriched.map((c) => ({
-        name: c.name,
-        domain: c.domain,
-        contactCount: c.contacts.length,
-        contacts: c.contacts.map((ct) => ({
-          email: ct.email,
-          name: ct.name ?? null,
-          title: ct.title ?? null,
-        })),
-      })),
-    }),
+    inputData: { entityCount: entities.length, targetEntity },
+    run: () =>
+      enrich({
+        entities,
+        targetEntity,
+        company,
+        email: providers.email.primary,
+      }),
   });
 }
 
-// ---------------------------------------------------------------------------
-// Pipeline execution
-// ---------------------------------------------------------------------------
 async function persistCriteria({
   searchId,
   criteria,
@@ -588,7 +605,7 @@ async function runSteps({
   searchId: string;
   criteria: SearchCriteria;
   providers: UseCaseProviders;
-}): Promise<EnrichedCompany[]> {
+}): Promise<EnrichedCompany[] | EnrichedJobOffer[]> {
   // Level 2 — never crash, continue with empty on failure
   const discoverResult = await runDiscover({ searchId, criteria, providers });
   if (!discoverResult.success)
@@ -596,22 +613,23 @@ async function runSteps({
       { searchId },
       "Discover failed — continuing with empty results",
     );
-  const discoveredCompanies = discoverResult.success ? discoverResult.data : [];
+  const discovered = discoverResult.success ? discoverResult.data : [];
 
   const qualifyResult = await runQualify({
     searchId,
-    companies: discoveredCompanies,
+    entities: discovered,
     criteria,
     providers,
   });
   if (!qualifyResult.success)
     logger.warn({ searchId }, "Qualify failed — continuing with empty results");
-  const qualifiedCompanies = qualifyResult.success ? qualifyResult.data : [];
+  const qualified = qualifyResult.success ? qualifyResult.data : [];
 
   const enrichResult = await runEnrich({
     searchId,
-    companies: qualifiedCompanies,
+    entities: qualified,
     providers,
+    targetEntity: criteria.targetEntity,
   });
   if (!enrichResult.success)
     logger.warn({ searchId }, "Enrich failed — continuing with empty results");
@@ -624,13 +642,7 @@ async function executePipeline({
   rawQuery,
   providers,
   uiCriteria,
-}: {
-  searchId: string;
-  useCaseName: string;
-  rawQuery: string;
-  providers: UseCaseProviders;
-  uiCriteria?: Record<string, unknown>;
-}): Promise<void> {
+}: ExecutePipelineOptions): Promise<void> {
   // Step 1 — blocking: no criteria = no pipeline
   const criteriaResult = await runExtractCriteria({
     searchId,
@@ -652,14 +664,13 @@ async function executePipeline({
     searchId,
     criteria: criteriaResult.data,
   });
-  if (!persistResult.success) {
+  if (!persistResult.success)
     logger.error(
       { searchId, error: persistResult.error.message },
       "Failed to persist criteria",
     );
-  }
 
-  const enrichedCompanies = await runSteps({
+  const results = await runSteps({
     searchId,
     criteria: criteriaResult.data,
     providers,
@@ -667,25 +678,19 @@ async function executePipeline({
 
   const saveResult = await saveResults({
     searchId,
-    companies: enrichedCompanies,
+    results,
+    targetEntity: criteriaResult.data.targetEntity,
   });
-  if (!saveResult.success) {
+  if (!saveResult.success)
     logger.error(
       { searchId, error: saveResult.error.message },
       "Failed to save results",
     );
-  }
 
   await updateSearchStatus({ searchId, status: "completed" });
-  logger.info(
-    { searchId, resultCount: enrichedCompanies.length },
-    "Pipeline completed",
-  );
+  logger.info({ searchId, resultCount: results.length }, "Pipeline completed");
 }
 
-// ---------------------------------------------------------------------------
-// Main entry point
-// ---------------------------------------------------------------------------
 export async function runPipeline({
   searchId,
   useCaseName,

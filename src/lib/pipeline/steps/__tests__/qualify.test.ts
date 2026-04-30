@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { QualifiedCompany } from "@/types";
 import { qualify } from "@/lib/pipeline/steps/qualify";
 import { fakeCompany } from "@/tests/fixtures/company";
 import { fakeCriteria } from "@/tests/fixtures/search";
@@ -13,7 +14,7 @@ describe("qualify", () => {
     const llm = makeMockLLMProvider();
 
     const result = await qualify({
-      companies: [fakeCompany],
+      entities: [fakeCompany],
       criteria: fakeCriteria,
       scraper,
       llm,
@@ -51,7 +52,7 @@ describe("qualify", () => {
     const llm = makeMockLLMProvider();
 
     const result = await qualify({
-      companies: [fakeCompany, anotherCompany],
+      entities: [fakeCompany, anotherCompany],
       criteria: fakeCriteria,
       scraper,
       llm,
@@ -61,7 +62,7 @@ describe("qualify", () => {
     if (!result.success) return;
     // First company scrape failed — skipped; second is returned
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].domain).toBe("beta.fr");
+    expect((result.data as QualifiedCompany[])[0].domain).toBe("beta.fr");
   });
 
   it("skips company when llm qualify fails", async () => {
@@ -73,7 +74,7 @@ describe("qualify", () => {
     });
 
     const result = await qualify({
-      companies: [fakeCompany],
+      entities: [fakeCompany],
       criteria: fakeCriteria,
       scraper,
       llm,
@@ -86,7 +87,7 @@ describe("qualify", () => {
 
   it("returns empty list when no companies are provided", async () => {
     const result = await qualify({
-      companies: [],
+      entities: [],
       criteria: fakeCriteria,
       scraper: makeMockScraperProvider(),
       llm: makeMockLLMProvider(),

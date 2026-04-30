@@ -8,6 +8,13 @@
       "when": 1777544675584,
       "tag": "0000_zippy_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777549713591,
+      "tag": "0001_magical_ares",
+      "breakpoints": true
     }
   ]
 }

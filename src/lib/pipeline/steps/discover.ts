@@ -9,6 +9,7 @@ import type {
   Result,
   SearchCriteria,
   SearchResult,
+  SignalSource,
 } from "@/types";
 
 const SEARCH_LIMIT_PER_QUERY = 10;
@@ -22,6 +23,8 @@ export type DiscoverOptions = {
   llm: LLMProvider;
 };
 
+type NamedSource = { name: string; source: SignalSource };
+
 async function runJobBoardSources({
   providers,
   criteria,
@@ -34,12 +37,22 @@ async function runJobBoardSources({
     location: criteria.location,
   };
   const settlements = await Promise.allSettled(
-    providers.map((provider) => provider.searchJobs(jobCriteria)),
+    providers.map((provider) =>
+      provider.searchJobs(jobCriteria).then((result) => ({
+        result,
+        providerName: provider.name as SignalSource,
+      })),
+    ),
   );
   const postings: JobPosting[] = [];
   for (const settlement of settlements) {
-    if (settlement.status === "fulfilled" && settlement.value.success) {
-      postings.push(...settlement.value.data);
+    if (settlement.status === "fulfilled" && settlement.value.result.success) {
+      postings.push(
+        ...settlement.value.result.data.map((posting) => ({
+          ...posting,
+          source: settlement.value.providerName,
+        })),
+      );
     }
   }
   return postings;
@@ -65,7 +78,10 @@ async function runPappersSearch({
     );
     return [];
   }
-  return result.data;
+  return result.data.map((company) => ({
+    ...company,
+    source: "pappers_search" as const,
+  }));
 }
 
 async function runBraveSource({
@@ -98,23 +114,31 @@ async function runBraveSource({
 }
 
 async function resolveNamesToCompanies({
-  names,
+  namedSources,
   company,
 }: {
-  names: string[];
+  namedSources: NamedSource[];
   company: CompanyProvider;
 }): Promise<CompanyData[]> {
+  const uniqueByName = [
+    ...new Map(namedSources.map((ns) => [ns.name, ns])).values(),
+  ];
   const settlements = await Promise.allSettled(
-    names.map((name) => company.findByName(name)),
+    uniqueByName.map(({ name, source }) =>
+      company.findByName(name).then((result) => ({ result, source })),
+    ),
   );
   const companies: CompanyData[] = [];
   for (const settlement of settlements) {
     if (
       settlement.status === "fulfilled" &&
-      settlement.value.success &&
-      settlement.value.data !== null
+      settlement.value.result.success &&
+      settlement.value.result.data !== null
     ) {
-      companies.push(settlement.value.data);
+      companies.push({
+        ...settlement.value.result.data,
+        source: settlement.value.source,
+      });
     }
   }
   return companies;
@@ -146,9 +170,14 @@ function deduplicateByUrl({
   });
 }
 
-async function collectSignalSources(
-  options: DiscoverOptions,
-): Promise<{ pappersCompanies: CompanyData[]; companyNames: string[] }> {
+function deduplicateNamedSources(sources: NamedSource[]): NamedSource[] {
+  return [...new Map(sources.map((ns) => [ns.name, ns])).values()];
+}
+
+async function collectSignalSources(options: DiscoverOptions): Promise<{
+  pappersCompanies: CompanyData[];
+  namedSources: NamedSource[];
+}> {
   const { criteria, jobBoardProviders, company } = options;
 
   const hasJobBoardSignal = criteria.signalSources.some(
@@ -162,15 +191,21 @@ async function collectSignalSources(
   const jobBoardPromise =
     hasJobBoardSignal && jobBoardProviders?.length
       ? runJobBoardSources({ providers: jobBoardProviders, criteria }).then(
-          (postings) => postings.map((posting) => posting.companyName),
+          (postings) =>
+            postings.map((posting) => ({
+              name: posting.companyName,
+              source: posting.source ?? ("france_travail" as const),
+            })),
         )
-      : Promise.resolve([] as string[]);
+      : Promise.resolve([] as NamedSource[]);
 
   const bravePromise = criteria.signalSources.includes("brave")
-    ? runBraveSource(options)
-    : Promise.resolve([] as string[]);
+    ? runBraveSource(options).then((names) =>
+        names.map((name) => ({ name, source: "brave" as const })),
+      )
+    : Promise.resolve([] as NamedSource[]);
 
-  const [pappersCompanies, jobBoardNames, braveNames] = await Promise.all([
+  const [pappersCompanies, jobBoardNamed, braveNamed] = await Promise.all([
     pappersPromise,
     jobBoardPromise,
     bravePromise,
@@ -178,7 +213,7 @@ async function collectSignalSources(
 
   return {
     pappersCompanies,
-    companyNames: [...new Set([...jobBoardNames, ...braveNames])],
+    namedSources: deduplicateNamedSources([...jobBoardNamed, ...braveNamed]),
   };
 }
 
@@ -187,10 +222,10 @@ async function discoverCompanies(
 ): Promise<Result<CompanyData[]>> {
   const { criteria, company } = options;
 
-  const { pappersCompanies, companyNames } =
+  const { pappersCompanies, namedSources } =
     await collectSignalSources(options);
   const resolvedCompanies = await resolveNamesToCompanies({
-    names: companyNames,
+    namedSources,
     company,
   });
 

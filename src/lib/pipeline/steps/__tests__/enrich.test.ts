@@ -1,14 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import { enrich } from "@/lib/pipeline/steps/enrich";
 import { fakeQualifiedCompany } from "@/tests/fixtures/company";
-import { makeMockEmailProvider } from "@/tests/mocks/providers";
+import {
+  makeMockCompanyProvider,
+  makeMockEmailProvider,
+} from "@/tests/mocks/providers";
 
 describe("enrich", () => {
   it("returns enriched companies with contacts", async () => {
     const email = makeMockEmailProvider();
 
     const result = await enrich({
-      companies: [fakeQualifiedCompany],
+      entities: [fakeQualifiedCompany],
+      targetEntity: "company",
+      company: makeMockCompanyProvider(),
       email,
     });
 
@@ -27,7 +32,9 @@ describe("enrich", () => {
     });
 
     const result = await enrich({
-      companies: [fakeQualifiedCompany],
+      entities: [fakeQualifiedCompany],
+      targetEntity: "company",
+      company: makeMockCompanyProvider(),
       email,
     });
 
@@ -39,7 +46,12 @@ describe("enrich", () => {
   it("returns empty list when no companies are provided", async () => {
     const email = makeMockEmailProvider();
 
-    const result = await enrich({ companies: [], email });
+    const result = await enrich({
+      entities: [],
+      targetEntity: "company",
+      company: makeMockCompanyProvider(),
+      email,
+    });
 
     expect(result).toEqual({ success: true, data: [] });
   });
