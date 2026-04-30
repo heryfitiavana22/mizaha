@@ -81,7 +81,11 @@ Scoring guide:
 - 0.7–0.9: strong match, most criteria confirmed
 - 1.0: perfect match
 
-Hard criteria rule: some criteria are binary and non-negotiable (contract type, remote policy, "n'est pas un cabinet/ESN"). If the content explicitly contradicts such a criterion (e.g., the posting is CDI but the criterion requires freelance, or the job is on-site but full remote is required), the score MUST NOT exceed 0.4, regardless of how well other criteria are met.
+Hard criteria rule: the following are binary and non-negotiable. If the content explicitly contradicts any of them, the score MUST NOT exceed 0.4, regardless of how well other criteria are met:
+- Contract type: posting is CDI/CDD but freelance is required, or vice versa
+- Remote policy: posting is on-site or hybrid but full remote is explicitly required
+- Tech stack: posting mentions only completely unrelated technologies with zero overlap with the required stack (e.g., required TypeScript/Node.js but posting only mentions SAP, COBOL, or mainframe)
+- Organizational type: entity is a recruitment agency, ESN, or staffing firm when the criterion forbids it
 
 Only list criteria in matchedCriteria that are clearly confirmed by the content.
 Write the reason in French — it will be displayed directly to the user.`;
