@@ -149,10 +149,31 @@ export async function GET(
 
   const results = searchResultsResult.data.map((row) => {
     const entityData = (row.data ?? {}) as Record<string, unknown>;
+
+    if (row.type === "job_offer") {
+      return {
+        type: "job_offer" as const,
+        entityId: row.entityId,
+        title: (entityData.title as string) ?? "",
+        companyName: (entityData.companyName as string) ?? "",
+        url: (entityData.url as string) ?? "",
+        contractType: (entityData.contractType as string) ?? "",
+        location: (entityData.location as string) ?? "",
+        techStack: Array.isArray(entityData.techStack)
+          ? (entityData.techStack as string[])
+          : [],
+        description: (entityData.description as string) ?? "",
+        postedAt: (entityData.postedAt as string) ?? null,
+        relevanceScore: row.score,
+        relevanceReason: row.reason,
+      };
+    }
+
     const rawContacts = contactsResult.data.filter(
       (c) => c.entityId === row.entityId,
     );
     return {
+      type: "company" as const,
       companyId: row.entityId,
       name: (entityData.name as string) ?? "",
       domain: (entityData.domain as string) ?? "",

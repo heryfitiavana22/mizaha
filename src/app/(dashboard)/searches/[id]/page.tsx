@@ -5,10 +5,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyList } from "@/components/companies/company-list";
 import { StatusBadge } from "@/components/companies/status-badge";
 import type { CompanyResult } from "@/components/companies/company-card";
+import { JobOfferList } from "@/components/jobs/job-offer-list";
+import type { JobOfferResult } from "@/components/jobs/job-offer-card";
 import { PipelineSteps } from "@/components/pipeline/pipeline-steps";
 import type { PipelineRun } from "@/components/pipeline/types";
 
 type SearchStatus = "pending" | "running" | "completed" | "failed";
+
+type SearchResultItem = CompanyResult | JobOfferResult;
 
 type SearchData = {
   search: {
@@ -18,7 +22,7 @@ type SearchData = {
     status: string | null;
     createdAt: string | null;
   };
-  results: CompanyResult[];
+  results: SearchResultItem[];
   pipelineRuns: PipelineRun[];
 };
 
@@ -121,15 +125,32 @@ export default function SearchResultsPage({ params }: PageProps) {
         </p>
       )}
 
-      {status === "completed" && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground">
-            {results.length} entreprise{results.length !== 1 ? "s" : ""} trouvée
-            {results.length !== 1 ? "s" : ""}
-          </p>
-          <CompanyList companies={results} />
-        </div>
-      )}
+      {status === "completed" &&
+        (() => {
+          const isJobSearch = search.useCase === "find-jobs";
+          const singular = isJobSearch ? "offre" : "entreprise";
+          const plural = isJobSearch ? "offres" : "entreprises";
+          const label =
+            results.length !== 1
+              ? `${results.length} ${plural} trouvées`
+              : `1 ${singular} trouvée`;
+          const jobOffers = results.filter(
+            (r): r is JobOfferResult => r.type === "job_offer",
+          );
+          const companies = results.filter(
+            (r): r is CompanyResult => r.type === "company",
+          );
+          return (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">{label}</p>
+              {isJobSearch ? (
+                <JobOfferList offers={jobOffers} />
+              ) : (
+                <CompanyList companies={companies} />
+              )}
+            </div>
+          );
+        })()}
     </div>
   );
 }

@@ -82,11 +82,14 @@ This applies to everything: providers (Brave, Pappers, Firecrawl, Hunter...), li
 
 ## Project Status
 
-| Phase                                         | Status |
-| --------------------------------------------- | ------ |
-| Discussion & design                           | Done   |
-| Project setup                                 | To do  |
-| Core pipeline                                 | To do  |
-| Chat interface                                | To do  |
-| Providers (Brave, Pappers, Firecrawl, Hunter) | To do  |
-| Functional MVP                                | To do  |
+| Phase                                                          | Status      |
+| -------------------------------------------------------------- | ----------- |
+| Discussion & design                                            | Done        |
+| Project setup                                                  | Done        |
+| Core pipeline (extract-criteria → discover → qualify → enrich) | Done        |
+| Provider abstraction (6 interfaces, all adapters wired)        | Done        |
+| UC1 — Freelance client search (company discovery)              | Done        |
+| UC2 — Job/mission search (job_offer discovery, FreeWork)       | Done        |
+| Results page (company cards + job offer cards)                 | Done        |
+| Chat interface (json-render, interactive criteria)             | In progress |
+| Production deployment                                          | To do       |

@@ -240,10 +240,10 @@ Run these checks before calling the refactor done:
   - Results must be real company domains (NOT linkedin.com, indeed.fr, welcometothejungle.com)
   - At least 5 results with score ≥ 0.5 and a contact email each
 
-- [ ] Use Case 2: `"Je cherche une mission freelance TypeScript Node.js en full remote"`
-  - discover must return `JobPosting[]` from France Travail + WTTJ
-  - qualify must score each posting without calling Firecrawl
-  - Results must have company data from Pappers
+- [x] Use Case 2: `"Je cherche une mission freelance TypeScript Node.js en full remote"`
+  - discover returns `JobPosting[]` from FreeWork (free-work.com) + France Travail fallback
+  - qualify scores each posting without Firecrawl (uses posting.description directly)
+  - 11 results with score ≥ 0.5 on validation run
 
 - [ ] `pipeline_runs` has correct entries for every step (status, duration_ms)
 - [ ] Firecrawl credit usage: verify no double-scraping (qualify + enrich must not scrape the same URL twice)

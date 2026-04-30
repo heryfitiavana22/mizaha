@@ -9,7 +9,15 @@ export const searchCriteriaSchema = z.object({
     ),
 
   signalSources: z
-    .array(z.enum(["france_travail", "wttj", "pappers_search", "brave"]))
+    .array(
+      z.enum([
+        "france_travail",
+        "wttj",
+        "pappers_search",
+        "brave",
+        "free_work",
+      ]),
+    )
     .describe(
       "Which data sources to activate in discover. " +
         "Include 'france_travail' and/or 'wttj' when the query implies hiring signals. " +
@@ -53,6 +61,22 @@ export const searchCriteriaSchema = z.object({
     .transform((v) => v ?? undefined)
     .describe(
       "Specific role to target if mentioned (e.g. CTO, Head of Product, HR Director). null if not mentioned.",
+    ),
+
+  contractType: z
+    .enum(["cdi", "cdd", "freelance", "alternance"])
+    .nullable()
+    .transform((v) => v ?? undefined)
+    .describe(
+      "Contract type if explicitly mentioned. 'freelance' for mission freelance. null if not specified.",
+    ),
+
+  remote: z
+    .boolean()
+    .nullable()
+    .transform((v) => v ?? undefined)
+    .describe(
+      "true if the user explicitly requires full remote. null if not mentioned or if partial remote is mentioned.",
     ),
 
   maxResults: z
@@ -147,12 +171,20 @@ targetEntity:
 - Set to "company" when the user is looking for companies to prospect or contact (freelance client search, agency prospecting, B2B sales).
 - Set to "job_offer" when the user is looking for a job, mission, or CDI for themselves.
 
+contractType — extract only when explicitly mentioned:
+- "freelance", "mission freelance", "indépendant" → "freelance"
+- "CDI" → "cdi" | "CDD" → "cdd" | "alternance", "apprentissage" → "alternance"
+- null if not mentioned
+
+remote — true only when "full remote", "100% remote", "télétravail total", "full télétravail" is explicitly stated. null otherwise.
+
 signalSources — include only what the query implies:
-- "france_travail": query implies a company is hiring — "recrutent", "ont un poste ouvert", "ont besoin d'un dev", "cherchent un développeur", or any phrasing suggesting an open position.
-- "wttj": query mentions startups, tech companies, or tech stack — WTTJ specializes in tech startup jobs. Include alongside "france_travail" when both apply.
-- "pappers_search": query mentions sector, size, location, or legal form — Pappers enables structured company lookup.
+- "france_travail": user is looking for CDI/CDD/employee jobs. Also useful for general job searches.
+- "wttj": user is looking for jobs at tech startups specifically (targetEntity=company discovery only).
+- "free_work": user is looking for freelance missions or contractor work. Primary source for "mission freelance", "freelance", "TJM", "indépendant" queries. Always include for targetEntity=job_offer with freelance signals.
+- "pappers_search": query mentions sector, size, location, or legal form — for company discovery only.
 - "brave": query mentions funding ("levée de fonds"), recent news, or signals with no dedicated API.
-- Always include at least one source. Include multiple when the query has several signal types. For "company" targetEntity with hiring signals, include BOTH "france_travail" AND "wttj" by default.
+- Always include at least one source. For "job_offer" with freelance signals, include "free_work". For "job_offer" with CDI signals, include "france_travail". For "company" targetEntity with hiring signals, include BOTH "france_travail" AND "wttj" by default.
 
 searchStrategies (only for targetEntity = "company"):
 - 3 to 5 Brave queries targeting company-side pages — their blog, press coverage, funding news, career page.
@@ -165,6 +197,7 @@ qualificationCriteria:
 - For job offers: verifiable from the job posting content.
 - Be specific and observable — not vague assessments.
 - Always include this negative criterion when targetEntity is "company": "L'entreprise n'est pas un cabinet de recrutement, une ESN, une agence d'intérim, ni un prestataire RH".
+- Always include this criterion when targetEntity is "job_offer": "Le poste est un rôle technique ou de développement (développeur, ingénieur, architecte, data, DevOps) — pas un rôle commercial, RH ou management pur".
 
 Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
 }

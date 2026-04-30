@@ -48,6 +48,7 @@ This is the core of the pipeline. The discover step is **signal-aware**: it uses
 | -------------------------- | ---------------------- | ---------------------------------------------------------------- |
 | "hiring dev"               | France Travail API     | Free official API → job postings → extract company name          |
 | "tech jobs"                | WTTJ Algolia API       | Public Algolia index → company name + slug → no scraping, no LLM |
+| "freelance missions"       | FreeWork API           | Public JSON API → job_offer[] with title, description, skills    |
 | "sector + location + size" | SIRENE                 | Direct structured query → returns companies with domains         |
 | "funding / news"           | Brave targeted queries | LLM extracts company names from results → domain resolution      |
 
@@ -77,12 +78,15 @@ CompanyData[]
 ### Flow for "find job offers" (targetEntity = "job_offer")
 
 ```text
-France Travail API → job postings matching criteria
-WTTJ scraping → job postings matching criteria
+FreeWork API → job postings matching criteria (freelance, remote, keywords)
+France Travail API → job postings matching criteria (CDI/CDD fallback)
+  ↓
+Filter postings with empty description
+Deduplicate by URL
   ↓
 Qualify each posting (Claude scores directly — no scraping needed)
   ↓
-Enrich: add company data from Pappers/SIRENE
+Enrich: add company data from SIRENE
   ↓
 JobOffer[]
 ```
@@ -166,7 +170,9 @@ src/lib/providers/
 │   └── firecrawl.ts       → implements EmailProvider (scrapes /team, /contact pages)
 ├── job-board/
 │   ├── france-travail.ts  → implements JobBoardProvider (free official API)
-│   └── wttj.ts            → implements JobBoardProvider (Firecrawl scraping)
+│   ├── wttj.ts            → implements JobBoardProvider (Algolia — UC1 company discovery)
+│   ├── wttj-jobs.ts       → implements JobBoardProvider (Firecrawl scraping — not active)
+│   └── free-work.ts       → implements JobBoardProvider (public JSON API — UC2 freelance)
 └── llm/
     └── vercel.ts          → implements LLMProvider — model injected at runtime
 ```

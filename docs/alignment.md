@@ -44,16 +44,17 @@ The LLM (in `extract-criteria`) produces a `SearchCriteria` object that includes
 
 The `discover` step activates sources in parallel based on `signalSources`:
 
-| Signal                      | Source                    | Why it works                                                  |
-| --------------------------- | ------------------------- | ------------------------------------------------------------- |
-| "cherche un dev"            | France Travail API        | Official French job API — returns postings with company names |
-| "tech startup jobs"         | WTTJ scraping (Firecrawl) | Tech-focused job board                                        |
-| "secteur + taille + région" | Pappers search() / SIRENE | Structured query → company data directly                      |
-| "levée de fonds / news"     | Brave targeted queries    | No specialized API for this                                   |
+| Signal                      | Source                 | Why it works                                                      |
+| --------------------------- | ---------------------- | ----------------------------------------------------------------- |
+| "cherche un dev"            | France Travail API     | Official French job API — returns postings with company names     |
+| "tech startup jobs"         | WTTJ Algolia API       | Public Algolia index — company names + slugs, no scraping, no LLM |
+| "mission freelance"         | FreeWork API           | Public JSON API — freelance contractor missions, no auth          |
+| "secteur + taille + région" | SIRENE                 | Structured query → company data directly                          |
+| "levée de fonds / news"     | Brave targeted queries | No specialized API for this                                       |
 
 For `targetEntity = "company"`: all sources return company names → `Pappers.findByName()` resolves the domain → deduplicated `CompanyData[]`.
 
-For `targetEntity = "job_offer"`: France Travail + WTTJ return `JobPosting[]` directly — no domain resolution needed.
+For `targetEntity = "job_offer"`: FreeWork + France Travail return `JobPosting[]` directly — no domain resolution needed.
 
 ### 3. The pipeline now supports two entity types
 
@@ -97,8 +98,8 @@ Input: `"Je cherche une mission freelance TypeScript Node.js en full remote"`
 
 Expected output:
 
-- Real job postings from France Travail or WTTJ
-- Each posting has: title, company name, location, contract type, why it matches, company info from Pappers
+- Real job postings from FreeWork (freelance) or France Travail (CDI/CDD)
+- Each posting has: title, company name, location, contract type, why it matches, company info from SIRENE
 
 ### The pipeline must never
 
@@ -115,7 +116,8 @@ Expected output:
 | ----------------------------------------------------------- | -------------------------------------------------------------------------- |
 | Read `docs/` entirely before writing code                   | The previous Claude didn't fully align — the discover step was built wrong |
 | `doc-by-other-cc/` is NOT the reference                     | It contains the failed approach. Use `docs/` only                          |
-| France Travail + WTTJ are primary discovery                 | This is the architectural fix — do not revert to Brave-first               |
+| France Travail + WTTJ are primary for company discovery     | This is the architectural fix — do not revert to Brave-first               |
+| FreeWork is primary for job_offer (freelance) discovery     | Public JSON API — free, no auth, rich data                                 |
 | Every function returns `Result<T>`, never throws            | Convention 1 — non-negotiable                                              |
 | Object parameters everywhere                                | Convention 2 — non-negotiable                                              |
 | Pipeline steps are pure (no DB writes, no direct API calls) | Convention 4 — non-negotiable                                              |

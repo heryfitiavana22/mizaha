@@ -47,8 +47,8 @@ This single field changes the behavior of discover, qualify, and enrich.
 **Sources activated**:
 
 - France Travail API → companies with open dev positions
-- WTTJ scraping → tech startups hiring
-- Pappers/SIRENE → official company data + domain resolution
+- WTTJ Algolia API → tech startups (public Algolia index — no scraping)
+- SIRENE → official company data + domain resolution
 
 **Signals extracted dynamically by the LLM from the user's query** (no hardcoded list):
 
@@ -80,8 +80,8 @@ This single field changes the behavior of discover, qualify, and enrich.
 
 **Sources activated**:
 
-- France Travail API → all French job postings (free, official)
-- WTTJ scraping → tech startup jobs
+- FreeWork API → freelance/contractor missions (primary — public JSON API, no auth)
+- France Travail API → CDI/CDD postings (fallback)
 - No Brave needed (job boards ARE the source here)
 
 **Output per job offer**:
@@ -90,7 +90,7 @@ This single field changes the behavior of discover, qualify, and enrich.
 - Contract type (CDI, CDD, freelance, alternance)
 - Tech stack mentioned
 - Why it matches (score + explanation)
-- Apply link + company info from Pappers
+- Apply link + company info from SIRENE
 
 **Query examples**:
 

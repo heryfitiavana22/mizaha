@@ -1,8 +1,8 @@
 import { openai } from "@ai-sdk/openai";
 import { SireneCompanyProvider } from "@/lib/providers/company/sirene";
 import { FirecrawlEmailProvider } from "@/lib/providers/email/firecrawl";
+import { FreeWorkProvider } from "@/lib/providers/job-board/free-work";
 import { FranceTravailProvider } from "@/lib/providers/job-board/france-travail";
-import { WttjProvider } from "@/lib/providers/job-board/wttj";
 import { VercelLLMProvider } from "@/lib/providers/llm/vercel";
 import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
 import { BraveSearchProvider } from "@/lib/providers/search/brave";
@@ -34,8 +34,8 @@ export const findJobsConfig: UseCaseConfig = {
       ),
     },
     jobBoard: {
-      primary: new FranceTravailProvider(),
-      backup: new WttjProvider(),
+      primary: new FreeWorkProvider(),
+      backup: new FranceTravailProvider(),
     },
     llm: new VercelLLMProvider(openai(OPENAI_MODEL_ID), OPENAI_MODEL_ID),
   },

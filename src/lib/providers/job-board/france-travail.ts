@@ -101,14 +101,15 @@ async function fetchOffres({
     params.set("typeContrat", CONTRACT_TYPE_MAP[criteria.contractType]);
 
   const rangeEnd = (criteria.limit ?? DEFAULT_LIMIT) - 1;
+  params.set("range", `0-${rangeEnd}`);
   const response = await fetch(`${API_BASE_URL}/offres/search?${params}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",
-      Range: `0-${rangeEnd}`,
     },
   });
 
+  if (response.status === 204) return [];
   if (!response.ok)
     throw new Error(`France Travail API responded with ${response.status}`);
 

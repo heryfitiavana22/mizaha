@@ -212,14 +212,17 @@ type QualificationResult = {
 
 ### Job Board (primary discovery for "hiring" signals)
 
-| Provider       | File                          | Free tier                     | Status                               |
-| -------------- | ----------------------------- | ----------------------------- | ------------------------------------ |
-| France Travail | `job-board/france-travail.ts` | Free, unlimited               | Active MVP — official French job API |
-| WTTJ           | `job-board/wttj.ts`           | Free (scraping via Firecrawl) | Active MVP — tech startup jobs       |
+| Provider         | File                          | Free tier                 | Status                                   |
+| ---------------- | ----------------------------- | ------------------------- | ---------------------------------------- |
+| France Travail   | `job-board/france-travail.ts` | Free, unlimited           | Active — CDI/CDD fallback for UC2        |
+| WTTJ (companies) | `job-board/wttj.ts`           | Free (Algolia public key) | Active — UC1 company discovery           |
+| FreeWork         | `job-board/free-work.ts`      | Free (public JSON API)    | Active — UC2 freelance mission discovery |
 
 **France Travail** (ex-Pôle Emploi) is the official French government job API. Free, no rate limit documented for reasonable use. Returns all French job postings including company name.
 
-**WTTJ** (Welcome to the Jungle) exposes a public Algolia index (`wk_cms_organizations_production`) via client-side keys embedded in their page HTML. We query it directly over HTTP — no scraping, no Playwright, no LLM, no Firecrawl credits. The query filters `offices.country_code:FR AND jobs_count > 0` and returns company name + slug. The WTTJ company page URL is constructed from the slug. Keys: `ALGOLIA_APP_ID = "CSEKHVMS53"`, `ALGOLIA_API_KEY = "4bd8f6215d0cc52b26430765769e65a0"`.
+**WTTJ companies** (`wttj.ts`) — used for UC1 (`targetEntity: "company"`). Queries the public Algolia index `wk_cms_organizations_production` directly over HTTP. No scraping, no LLM, no Firecrawl credits. Returns company names + slugs. Keys: `ALGOLIA_APP_ID = "CSEKHVMS53"`, `ALGOLIA_API_KEY = "4bd8f6215d0cc52b26430765769e65a0"`.
+
+**FreeWork** (`free-work.ts`) — used for UC2 (`targetEntity: "job_offer"`). free-work.com (formerly freelance-info.fr) is a French tech freelance mission board. Exposes a public JSON API at `https://www.free-work.com/api/job_postings`. No auth required. Filters: `contracts=contractor` for freelance, `remoteMode=full` for full remote, `keywords=...` for tech stack, `locationKeys=fr~~~` for France. Returns rich job posting objects with title, description, skills, location, applicationUrl.
 
 ---
 
@@ -289,15 +292,15 @@ Switching model = changing the model argument in the use case config, not the ad
 
 ## Free Tier Summary for MVP
 
-| Provider       | Free limit            | Risk                                             |
-| -------------- | --------------------- | ------------------------------------------------ |
-| France Travail | Unlimited             | None                                             |
-| SIRENE         | 7 req/s               | Medium — batch calls, don't fire 30 in parallel  |
-| Brave Search   | 2,000 req/month       | Medium — now also used for domain resolution     |
-| Pappers        | Disabled              | High — account broken, adapter kept but not used |
-| Firecrawl      | 500 credits one-time  | High — budget carefully                          |
-| WTTJ Algolia   | Free (public keys)    | None — no scraping, direct HTTP to Algolia       |
-| Apollo.io      | ~10,000 credits/month | Low                                              |
+| Provider       | Free limit            | Risk                                                           |
+| -------------- | --------------------- | -------------------------------------------------------------- |
+| France Travail | Unlimited             | None                                                           |
+| SIRENE         | 7 req/s               | Medium — capped at 5 concurrent (SIRENE_CONCURRENCY) in enrich |
+| Brave Search   | 2,000 req/month       | Medium — now also used for domain resolution                   |
+| Pappers        | Disabled              | High — account broken, adapter kept but not used               |
+| Firecrawl      | 500 credits one-time  | High — budget carefully                                        |
+| WTTJ Algolia   | Free (public keys)    | None — no scraping, direct HTTP to Algolia                     |
+| Apollo.io      | ~10,000 credits/month | Low                                                            |
 
 **Key constraint**: Firecrawl credits. Each company qualification costs 1 credit (scrape). Each WTTJ page costs 1 credit. Plan accordingly.
 

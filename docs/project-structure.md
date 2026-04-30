@@ -31,6 +31,7 @@
 │   ├── components/
 │   │   ├── chat/                     # Conversational interface
 │   │   ├── companies/                # Cards, lists, company detail
+│   │   ├── jobs/                     # Job offer cards and list (UC2)
 │   │   └── ui/                       # shadcn/ui + AI Elements — base components
 │   │
 │   ├── lib/
@@ -53,14 +54,15 @@
 │   │   │   │   ├── pappers.ts        # → implements CompanyProvider
 │   │   │   │   └── sirene.ts         # → implements CompanyProvider
 │   │   │   ├── job-board/
-│   │   │   │   ├── france-travail.ts # → implements JobBoardProvider (primary)
-│   │   │   │   └── wttj.ts           # → implements JobBoardProvider (via Firecrawl)
+│   │   │   │   ├── france-travail.ts # → implements JobBoardProvider (CDI/CDD — official API)
+│   │   │   │   ├── wttj.ts           # → implements JobBoardProvider (Algolia — UC1 company discovery)
+│   │   │   │   ├── wttj-jobs.ts      # → implements JobBoardProvider (Firecrawl scraping — not active)
+│   │   │   │   └── free-work.ts      # → implements JobBoardProvider (public JSON API — UC2 freelance)
 │   │   │   ├── scraper/
 │   │   │   │   ├── firecrawl.ts      # → implements ScraperProvider
 │   │   │   │   └── playwright.ts     # → implements ScraperProvider (backup)
 │   │   │   └── llm/
-│   │   │       ├── openai.ts         # → implements LLMProvider (MVP)
-│   │   │       └── claude.ts         # → implements LLMProvider (future — switch in use-case config)
+│   │   │       └── vercel.ts         # → implements LLMProvider — model injected at runtime
 │   │   │
 │   │   ├── pipeline/
 │   │   │   ├── steps/

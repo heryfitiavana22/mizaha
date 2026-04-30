@@ -81,6 +81,8 @@ Scoring guide:
 - 0.7–0.9: strong match, most criteria confirmed
 - 1.0: perfect match
 
+Hard criteria rule: some criteria are binary and non-negotiable (contract type, remote policy, "n'est pas un cabinet/ESN"). If the content explicitly contradicts such a criterion (e.g., the posting is CDI but the criterion requires freelance, or the job is on-site but full remote is required), the score MUST NOT exceed 0.4, regardless of how well other criteria are met.
+
 Only list criteria in matchedCriteria that are clearly confirmed by the content.
 Write the reason in French — it will be displayed directly to the user.`;
 }

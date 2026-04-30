@@ -71,6 +71,8 @@ async function runJobBoardSources({
   const jobCriteria = {
     keywords: criteria.techStack,
     location: criteria.location,
+    contractType: criteria.contractType,
+    remote: criteria.remote,
   };
   const settlements = await Promise.allSettled(
     providers.map((provider) =>
@@ -276,7 +278,10 @@ async function collectSignalSources(options: DiscoverOptions): Promise<{
   const { criteria, jobBoardProviders, company } = options;
 
   const hasJobBoardSignal = criteria.signalSources.some(
-    (source) => source === "france_travail" || source === "wttj",
+    (source) =>
+      source === "france_travail" ||
+      source === "wttj" ||
+      source === "free_work",
   );
 
   const pappersPromise = criteria.signalSources.includes("pappers_search")
@@ -352,7 +357,8 @@ async function discoverJobOffers({
     providers: jobBoardProviders,
     criteria,
   });
-  const deduplicated = deduplicateByUrl({ postings });
+  const withContent = postings.filter((p) => p.description.trim().length > 0);
+  const deduplicated = deduplicateByUrl({ postings: withContent });
 
   logger.info({ count: deduplicated.length }, "discover: job offers collected");
   return { success: true, data: deduplicated };

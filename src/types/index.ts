@@ -21,7 +21,8 @@ export type SignalSource =
   | "france_travail"
   | "wttj"
   | "pappers_search"
-  | "brave";
+  | "brave"
+  | "free_work";
 
 // ---------------------------------------------------------------------------
 // Company
@@ -71,6 +72,8 @@ export type SearchCriteria = {
   techStack?: string[];
   employeeRange?: { min: number; max: number };
   targetPersona?: string;
+  contractType?: "cdi" | "cdd" | "freelance" | "alternance";
+  remote?: boolean;
   maxResults?: number;
   signalSources: SignalSource[];
   searchStrategies: string[];

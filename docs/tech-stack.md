@@ -52,7 +52,7 @@ The LLM is used for:
 - Explaining why a result matches
 - Generating a contact message draft
 
-**NOTE**: OpenAI (`gpt-4o-mini`) via Vercel AI SDK.
+**NOTE**: OpenAI (`gpt-5.4-mini`) via Vercel AI SDK. Model ID is set in each use case config — switch by changing one constant.
 
 ---
 

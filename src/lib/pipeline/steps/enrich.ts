@@ -89,6 +89,10 @@ async function enrichCompanies({
   return { success: true, data: enriched };
 }
 
+// SIRENE rate limit: 7 req/s — 3 concurrent + 150ms between chunks to stay safe
+const SIRENE_CONCURRENCY = 3;
+const SIRENE_CHUNK_DELAY_MS = 150;
+
 async function enrichJobOffers({
   offers,
   company,
@@ -96,12 +100,20 @@ async function enrichJobOffers({
   offers: QualifiedJobOffer[];
   company: CompanyProvider;
 }): Promise<Result<EnrichedJobOffer[]>> {
-  const settlements = await Promise.allSettled(
-    offers.map((offer) => enrichOneJobOffer({ offer, company })),
-  );
-  const enriched = settlements
-    .filter((settlement) => settlement.status === "fulfilled")
-    .map((settlement) => settlement.value);
+  const enriched: EnrichedJobOffer[] = [];
+  for (let i = 0; i < offers.length; i += SIRENE_CONCURRENCY) {
+    if (i > 0) await new Promise((r) => setTimeout(r, SIRENE_CHUNK_DELAY_MS));
+    const chunk = offers.slice(i, i + SIRENE_CONCURRENCY);
+    const results = await Promise.allSettled(
+      chunk.map((offer) => enrichOneJobOffer({ offer, company })),
+    );
+    for (let j = 0; j < results.length; j++) {
+      const r = results[j];
+      enriched.push(
+        r.status === "fulfilled" ? r.value : { ...chunk[j], contacts: [] },
+      );
+    }
+  }
   return { success: true, data: enriched };
 }
 

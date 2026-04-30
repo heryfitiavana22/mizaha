@@ -19,6 +19,7 @@ type Contact = {
 };
 
 export type CompanyResult = {
+  type: "company";
   companyId: string;
   name: string;
   domain: string;
