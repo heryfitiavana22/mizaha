@@ -142,7 +142,28 @@ Extract structured search criteria from the user's natural language query.
 Query: "${rawQuery}"${uiCriteriaSection}
 
 Instructions:
-- For searchStrategies: target company-side signals (tech blog, funding news, direct career page, press coverage) — not job-board vocabulary. Job-board terms ("offre d'emploi", "mission freelance", "recrutement CDI") surface job platforms, not company pages. Write natural-language queries, one quoted phrase per query maximum.
-- For qualificationCriteria: write in French what must be found on the company website to confirm relevance. Each criterion must be verifiable from website content.
-- Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
+
+targetEntity:
+- Set to "company" when the user is looking for companies to prospect or contact (freelance client search, agency prospecting, B2B sales).
+- Set to "job_offer" when the user is looking for a job, mission, or CDI for themselves.
+
+signalSources — include only what the query implies:
+- "france_travail": query mentions hiring, "recrutent", "ont un poste ouvert", or any signal that a company has an open position.
+- "wttj": query mentions startups, tech companies, or tech stack — WTTJ specializes in tech startup jobs.
+- "pappers_search": query mentions sector, size, location, or legal form — Pappers enables structured company lookup.
+- "brave": query mentions funding ("levée de fonds"), recent news, or signals with no dedicated API.
+- Always include at least one source. Include multiple when the query has several signal types.
+
+searchStrategies (only for targetEntity = "company"):
+- 3 to 5 Brave queries targeting company-side pages — their blog, press coverage, funding news, career page.
+- Never use job-board vocabulary ("offre emploi", "recrutement CDI") — those return job platforms, not company pages.
+- One quoted phrase per query maximum.
+
+qualificationCriteria:
+- 2 to 4 criteria written in French as affirmations to verify on the entity.
+- For companies: verifiable from the company website content.
+- For job offers: verifiable from the job posting content.
+- Be specific and observable — not vague assessments.
+
+Omit optional fields if they are not mentioned and cannot be reliably inferred.`;
 }

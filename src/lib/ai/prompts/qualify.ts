@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { QualifyInput } from "@/lib/providers/interfaces/llm";
+import type { CompanyData, JobPosting } from "@/types";
 
 export const qualificationResultSchema = z.object({
   score: z
@@ -10,16 +11,37 @@ export const qualificationResultSchema = z.object({
   reason: z
     .string()
     .describe(
-      "Human-readable explanation in French of why this company matches or does not match. Shown directly to the user.",
+      "Human-readable explanation in French of why this entity matches or does not match. Shown directly to the user.",
     ),
   matchedCriteria: z
     .array(z.string())
     .describe(
-      "Qualification criteria that are actually confirmed by the website content. Only include criteria with clear evidence.",
+      "Qualification criteria that are actually confirmed by the content. Only include criteria with clear evidence.",
     ),
 });
 
 const MAX_SCRAPED_CONTENT_CHARS = 4000;
+
+function formatEntityDescription({
+  entity,
+}: {
+  entity: CompanyData | JobPosting;
+}): string {
+  if ("domain" in entity) {
+    return `Company:
+- Name: ${entity.name}
+- Domain: ${entity.domain}
+- Sector: ${entity.sector || "unknown"}
+- Location: ${entity.location || "unknown"}
+${entity.employeeCount ? `- Employees: ${entity.employeeCount}` : ""}`;
+  }
+  return `Job offer:
+- Title: ${entity.title}
+- Company: ${entity.companyName}
+- Location: ${entity.location}
+- Contract: ${entity.contractType}
+${entity.techStack?.length ? `- Tech stack: ${entity.techStack.join(", ")}` : ""}`;
+}
 
 export function buildQualifyPrompt({
   entity,
@@ -35,29 +57,13 @@ export function buildQualifyPrompt({
   const personaLine = criteria.targetPersona
     ? `\n- Target persona: ${criteria.targetPersona}`
     : "";
-
   const criteriaList = criteria.qualificationCriteria
-    .map((c, i) => `${i + 1}. ${c}`)
+    .map((criterion, index) => `${index + 1}. ${criterion}`)
     .join("\n");
-
-  const isCompany = "domain" in entity;
-  const entityDescription = isCompany
-    ? `Company:
-- Name: ${entity.name}
-- Domain: ${entity.domain}
-- Sector: ${entity.sector || "unknown"}
-- Location: ${entity.location || "unknown"}
-${entity.employeeCount ? `- Employees: ${entity.employeeCount}` : ""}`
-    : `Job offer:
-- Title: ${entity.title}
-- Company: ${entity.companyName}
-- Location: ${entity.location}
-- Contract: ${entity.contractType}
-${entity.techStack?.length ? `- Tech stack: ${entity.techStack.join(", ")}` : ""}`;
 
   return `You are a B2B lead qualification assistant. Evaluate how well this entity matches the search criteria.
 
-${entityDescription}
+${formatEntityDescription({ entity })}
 
 Search criteria:
 - Sector: ${criteria.sector ?? "any"}

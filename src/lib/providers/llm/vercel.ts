@@ -6,9 +6,9 @@ import {
   searchCriteriaSchema,
 } from "@/lib/ai/prompts/extract-criteria";
 import {
-  buildDiscoverExtractPrompt,
-  extractedCompaniesSchema,
-} from "@/lib/ai/prompts/discover-extract";
+  buildExtractCompanyNamesPrompt,
+  extractedCompanyNamesSchema,
+} from "@/lib/ai/prompts/extract-company-names";
 import {
   buildQualifyPrompt,
   qualificationResultSchema,
@@ -90,9 +90,9 @@ export class VercelLLMProvider implements LLMProvider {
     try {
       const { output } = await generateText({
         model: this.model,
-        output: Output.object({ schema: extractedCompaniesSchema }),
+        output: Output.object({ schema: extractedCompanyNamesSchema }),
         maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
-        prompt: buildDiscoverExtractPrompt({ results }),
+        prompt: buildExtractCompanyNamesPrompt({ results }),
       });
 
       logger.info(
@@ -101,12 +101,12 @@ export class VercelLLMProvider implements LLMProvider {
           method: "extractCompanyNames",
           durationMs: Date.now() - start,
           status: "success",
-          count: output.companies.length,
+          count: output.companyNames.length,
         },
         "API call completed",
       );
 
-      return { success: true, data: output.companies };
+      return { success: true, data: output.companyNames };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error(

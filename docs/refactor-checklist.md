@@ -121,19 +121,19 @@
 
 ## Phase 4 — AI Prompts
 
-- [ ] **REWRITE** `src/lib/ai/prompts/extract-criteria.ts`
+- [x] **REWRITE** `src/lib/ai/prompts/extract-criteria.ts`
   - Output schema must include: `targetEntity`, `signalSources`, `searchStrategies`, `qualificationCriteria`
   - Remove `signals` array (replaced by dynamic `qualificationCriteria`)
   - `searchStrategies` must target company pages, NOT job boards (see `docs/alignment.md`)
   - `signalSources` must be inferred from the query intent
 
-- [ ] **ADD** `src/lib/ai/prompts/extract-company-names.ts`
+- [x] **ADD** `src/lib/ai/prompts/extract-company-names.ts`
   - Input: array of `{ title, url, snippet }` from Brave results
   - Output: array of real company names
   - Must ignore: aggregators, job boards, directories, news sites
   - Used by discover when Brave queries are activated
 
-- [ ] **UPDATE** `src/lib/ai/prompts/qualify.ts`
+- [x] **UPDATE** `src/lib/ai/prompts/qualify.ts`
   - Use `qualificationCriteria` array instead of `signals`
   - Accept both `CompanyData` and `JobPosting` as entity input
   - For job offers: the "content" to score is the job description, not a scraped website
