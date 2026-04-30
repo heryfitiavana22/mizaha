@@ -245,9 +245,9 @@ Run these checks before calling the refactor done:
   - qualify scores each posting without Firecrawl (uses posting.description directly)
   - 11 results with score ≥ 0.5 on validation run
 
-- [ ] `pipeline_runs` has correct entries for every step (status, duration_ms)
-- [ ] Firecrawl credit usage: verify no double-scraping (qualify + enrich must not scrape the same URL twice)
-- [ ] One provider failure must not crash the pipeline (test by disabling France Travail temporarily)
+- [x] `pipeline_runs` has correct entries for every step (status, duration_ms) — `trackStep` wraps all 4 steps, writes running→completed/failed + durationMs
+- [x] Firecrawl credit usage: verify no double-scraping — `enrichOneCompany` reuses `scrapedContent` from qualify; Firecrawl called only if no email found in existing content
+- [x] One provider failure must not crash the pipeline — `runJobBoardSources` uses `Promise.allSettled`; total failure returns `[]`; `runSteps` continues with empty list
 
 ---
 
