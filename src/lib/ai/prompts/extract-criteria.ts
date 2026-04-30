@@ -2,6 +2,21 @@ import { z } from "zod";
 import type { ExtractCriteriaInput } from "@/lib/providers/interfaces/llm";
 
 export const searchCriteriaSchema = z.object({
+  targetEntity: z
+    .enum(["company", "job_offer"])
+    .describe(
+      "What kind of entity to find. 'company' for B2B lead gen (freelance client search). 'job_offer' for job seekers.",
+    ),
+
+  signalSources: z
+    .array(z.enum(["france_travail", "wttj", "pappers_search", "brave"]))
+    .describe(
+      "Which data sources to activate in discover. " +
+        "Include 'france_travail' and/or 'wttj' when the query implies hiring signals. " +
+        "Include 'pappers_search' for sector/location/size filters. " +
+        "Include 'brave' for news or funding signals.",
+    ),
+
   sector: z
     .string()
     .nullable()

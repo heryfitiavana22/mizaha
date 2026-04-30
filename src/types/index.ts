@@ -28,26 +28,49 @@ export type CompanyData = {
 };
 
 // ---------------------------------------------------------------------------
+// Job Board
+// ---------------------------------------------------------------------------
+export type JobPosting = {
+  title: string;
+  companyName: string;
+  companyDomain?: string; // not always available — lookup via CompanyProvider if missing
+  location: string;
+  contractType: string;
+  techStack?: string[];
+  description: string;
+  url: string;
+  postedAt?: string;
+};
+
+// ---------------------------------------------------------------------------
 // Email
 // ---------------------------------------------------------------------------
 export type Contact = {
   name?: string;
   title?: string;
   email: string;
-  confidence: number; // 0-100 — Hunter returns max 3 contacts per domain on free tier
+  confidence: number; // 0-100
   linkedinUrl?: string;
 };
 
 // ---------------------------------------------------------------------------
 // LLM
 // ---------------------------------------------------------------------------
+export type SignalSource =
+  | "france_travail"
+  | "wttj"
+  | "pappers_search"
+  | "brave";
+
 export type SearchCriteria = {
+  targetEntity: "company" | "job_offer";
   sector?: string;
   location?: string;
   techStack?: string[];
   employeeRange?: { min: number; max: number };
   targetPersona?: string;
   maxResults?: number;
+  signalSources: SignalSource[];
   searchStrategies: string[];
   qualificationCriteria: string[];
 };
@@ -67,5 +90,15 @@ export type QualifiedCompany = CompanyData & {
 };
 
 export type EnrichedCompany = QualifiedCompany & {
+  contacts: Contact[];
+};
+
+export type QualifiedJobOffer = JobPosting & {
+  qualification: QualificationResult;
+  scrapedContent: string; // posting description passed from qualify → enrich
+};
+
+export type EnrichedJobOffer = QualifiedJobOffer & {
+  company?: CompanyData;
   contacts: Contact[];
 };
