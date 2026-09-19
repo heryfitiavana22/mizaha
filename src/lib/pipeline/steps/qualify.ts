@@ -188,7 +188,7 @@ export async function qualify({
   Result<QualifiedCompany[] | QualifiedJobOffer[]>
 > {
   const settlements = await Promise.allSettled(
-    (entities as Array<CompanyData | JobPosting>).map((entity) =>
+    entities.map((entity) =>
       qualifyOne({
         entity,
         criteria,
@@ -204,14 +204,7 @@ export async function qualify({
 
   const scored = settlements
     .filter((s) => s.status === "fulfilled")
-    .map(
-      (s) =>
-        (
-          s as PromiseFulfilledResult<
-            QualifiedCompany | QualifiedJobOffer | null
-          >
-        ).value,
-    )
+    .map((s) => s.value)
     .filter((r): r is QualifiedCompany | QualifiedJobOffer => r !== null);
 
   const qualified = scored.filter(
