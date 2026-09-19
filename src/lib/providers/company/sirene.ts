@@ -3,6 +3,7 @@ import type {
   CompanyCriteria,
   CompanyProvider,
 } from "@/lib/providers/interfaces/company";
+import type { SearchProvider } from "@/lib/providers/interfaces/search";
 import type { CompanyData, Result } from "@/types";
 
 // Open data — no auth required, 7 req/s rate limit
@@ -27,6 +28,22 @@ function isSireneSearchResponse(data: unknown): data is SireneSearchResponse {
   return typeof data === "object" && data !== null;
 }
 
+async function resolveDomain(
+  search: SearchProvider,
+  companyName: string,
+): Promise<string> {
+  const result = await search.search({
+    query: companyName,
+    options: { limit: 1 }, // assuming the first result is the right one
+  });
+  if (!result.success || !result.data.length) return "";
+  try {
+    return new URL(result.data[0].url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 function toCompanyData(e: SireneEtablissement): CompanyData | null {
   if (!e.nom_complet || !e.siren) return null;
   return {
@@ -36,6 +53,7 @@ function toCompanyData(e: SireneEtablissement): CompanyData | null {
     location: [e.siege?.code_postal, e.siege?.commune]
       .filter(Boolean)
       .join(" "),
+    source: "sirene_search" as const, // mark source for tracking
   };
 }
 
@@ -48,10 +66,13 @@ async function fetchSirene({
     q: query,
     per_page: String(DEFAULT_RESULTS_LIMIT),
   });
+
   const response = await fetch(`${BASE_URL}?${params}`);
   if (!response.ok)
     throw new Error(`SIRENE API responded with ${response.status}`);
   const data: unknown = await response.json();
+  console.log("data sirence", data);
+
   if (!isSireneSearchResponse(data))
     throw new Error("Unexpected SIRENE response shape");
   return data;
@@ -59,6 +80,11 @@ async function fetchSirene({
 
 export class SireneCompanyProvider implements CompanyProvider {
   readonly name = "SIRENE";
+  private readonly searchProvider?: SearchProvider;
+
+  constructor(searchProvider?: SearchProvider) {
+    this.searchProvider = searchProvider;
+  }
 
   async findByDomain(domain: string): Promise<Result<CompanyData | null>> {
     const start = Date.now();
@@ -104,6 +130,10 @@ export class SireneCompanyProvider implements CompanyProvider {
       const first =
         (data.results ?? []).map(toCompanyData).find(Boolean) ?? null;
 
+      if (first && this.searchProvider) {
+        first.domain = await resolveDomain(this.searchProvider, first.name);
+      }
+
       logger.info(
         {
           provider: "sirene",
@@ -142,6 +172,14 @@ export class SireneCompanyProvider implements CompanyProvider {
       const results = (data.results ?? [])
         .map(toCompanyData)
         .filter((c): c is CompanyData => c !== null);
+
+      if (this.searchProvider) {
+        await Promise.all(
+          results.map(async (c) => {
+            c.domain = await resolveDomain(this.searchProvider!, c.name);
+          }),
+        );
+      }
 
       logger.info(
         {
