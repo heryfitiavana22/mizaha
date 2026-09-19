@@ -1,6 +1,10 @@
 import type { CompanyProvider } from "@/lib/providers/interfaces/company";
+import type {
+  CompanyDiscoveryCriteria,
+  CompanySignalProvider,
+} from "@/lib/providers/interfaces/company-signal";
 import type { JobBoardProvider } from "@/lib/providers/interfaces/job-board";
-import type { LLMProvider } from "@/lib/providers/interfaces/llm";
+import type { TextExtractorProvider } from "@/lib/providers/interfaces/text-extractor";
 import type { SearchProvider } from "@/lib/providers/interfaces/search";
 import logger from "@/lib/logger";
 import type {
@@ -51,12 +55,18 @@ const KNOWN_AGGREGATOR_DOMAINS = new Set([
   "societeinfo.com",
 ]);
 
-export type DiscoverOptions = {
+export type DiscoverCompaniesOptions = {
   criteria: SearchCriteria;
   jobBoardProviders?: JobBoardProvider[];
+  companySignals?: CompanySignalProvider[];
   search: SearchProvider;
   company: CompanyProvider;
-  llm: LLMProvider;
+  llm: TextExtractorProvider;
+};
+
+export type DiscoverJobOffersOptions = {
+  criteria: SearchCriteria;
+  jobBoardProviders: JobBoardProvider[];
 };
 
 type NamedSource = { name: string; source: SignalSource };
@@ -96,6 +106,41 @@ async function runJobBoardSources({
   return postings;
 }
 
+async function runCompanySignalSources({
+  providers,
+  criteria,
+}: {
+  providers: CompanySignalProvider[];
+  criteria: SearchCriteria;
+}): Promise<NamedSource[]> {
+  const discoveryCriteria: CompanyDiscoveryCriteria = {
+    keywords: criteria.techStack,
+    limit: DEFAULT_MAX_RESULTS,
+  };
+  const settlements = await Promise.allSettled(
+    providers
+      .filter((p) => criteria.signalSources.includes(p.signalSource))
+      .map((provider) =>
+        provider.discoverCompanies(discoveryCriteria).then((result) => ({
+          result,
+          signalSource: provider.signalSource,
+        })),
+      ),
+  );
+  const namedSources: NamedSource[] = [];
+  for (const settlement of settlements) {
+    if (settlement.status === "fulfilled" && settlement.value.result.success) {
+      namedSources.push(
+        ...settlement.value.result.data.map((signal) => ({
+          name: signal.companyName,
+          source: settlement.value.signalSource,
+        })),
+      );
+    }
+  }
+  return namedSources;
+}
+
 async function runPappersSearch({
   criteria,
   company,
@@ -126,7 +171,11 @@ async function runBraveSource({
   criteria,
   search,
   llm,
-}: DiscoverOptions): Promise<string[]> {
+}: {
+  criteria: SearchCriteria;
+  search: SearchProvider;
+  llm: TextExtractorProvider;
+}): Promise<string[]> {
   const settlements = await Promise.allSettled(
     criteria.searchStrategies.map((query) =>
       search.search({ query, options: { limit: SEARCH_LIMIT_PER_QUERY } }),
@@ -241,11 +290,7 @@ async function resolveNamesToCompanies({
   return resolved.filter((c): c is CompanyData => c !== null);
 }
 
-function deduplicateByDomain({
-  companies,
-}: {
-  companies: CompanyData[];
-}): CompanyData[] {
+function deduplicateByDomain(companies: CompanyData[]): CompanyData[] {
   const seen = new Set<string>();
   return companies.filter((company) => {
     if (seen.has(company.domain)) return false;
@@ -254,11 +299,7 @@ function deduplicateByDomain({
   });
 }
 
-function deduplicateByUrl({
-  postings,
-}: {
-  postings: JobPosting[];
-}): JobPosting[] {
+function deduplicateByUrl(postings: JobPosting[]): JobPosting[] {
   const seen = new Set<string>();
   return postings.filter((posting) => {
     if (seen.has(posting.url)) return false;
@@ -271,25 +312,23 @@ function deduplicateNamedSources(sources: NamedSource[]): NamedSource[] {
   return [...new Map(sources.map((ns) => [ns.name, ns])).values()];
 }
 
-async function collectSignalSources(options: DiscoverOptions): Promise<{
+async function collectSignalSources(
+  options: DiscoverCompaniesOptions,
+): Promise<{
   pappersCompanies: CompanyData[];
   namedSources: NamedSource[];
 }> {
-  const { criteria, jobBoardProviders, company } = options;
+  const { criteria, jobBoardProviders, companySignals, company } = options;
 
-  const hasJobBoardSignal = criteria.signalSources.some(
-    (source) =>
-      source === "france_travail" ||
-      source === "wttj" ||
-      source === "free_work",
-  );
+  const hasJobBoardCompanySignal =
+    criteria.signalSources.includes("france_travail");
 
   const pappersPromise = criteria.signalSources.includes("pappers_search")
     ? runPappersSearch({ criteria, company })
     : Promise.resolve([] as CompanyData[]);
 
   const jobBoardPromise =
-    hasJobBoardSignal && jobBoardProviders?.length
+    hasJobBoardCompanySignal && jobBoardProviders?.length
       ? runJobBoardSources({ providers: jobBoardProviders, criteria }).then(
           (postings) =>
             postings.map((posting) => ({
@@ -299,26 +338,36 @@ async function collectSignalSources(options: DiscoverOptions): Promise<{
         )
       : Promise.resolve([] as NamedSource[]);
 
+  const companySignalsPromise = companySignals?.length
+    ? runCompanySignalSources({ providers: companySignals, criteria })
+    : Promise.resolve([] as NamedSource[]);
+
   const bravePromise = criteria.signalSources.includes("brave")
     ? runBraveSource(options).then((names) =>
         names.map((name) => ({ name, source: "brave" as const })),
       )
     : Promise.resolve([] as NamedSource[]);
 
-  const [pappersCompanies, jobBoardNamed, braveNamed] = await Promise.all([
-    pappersPromise,
-    jobBoardPromise,
-    bravePromise,
-  ]);
+  const [pappersCompanies, jobBoardNamed, companySignalNamed, braveNamed] =
+    await Promise.all([
+      pappersPromise,
+      jobBoardPromise,
+      companySignalsPromise,
+      bravePromise,
+    ]);
 
   return {
     pappersCompanies,
-    namedSources: deduplicateNamedSources([...jobBoardNamed, ...braveNamed]),
+    namedSources: deduplicateNamedSources([
+      ...jobBoardNamed,
+      ...companySignalNamed,
+      ...braveNamed,
+    ]),
   };
 }
 
-async function discoverCompanies(
-  options: DiscoverOptions,
+export async function discoverCompanies(
+  options: DiscoverCompaniesOptions,
 ): Promise<Result<CompanyData[]>> {
   const { criteria, search } = options;
 
@@ -332,43 +381,27 @@ async function discoverCompanies(
   const maxResults = criteria.maxResults ?? DEFAULT_MAX_RESULTS;
   // SIRENE returns SIREN numbers (9 digits) as domain — skip them, no real URL
   const validPappers = pappersCompanies.filter((c) => !/^\d+$/.test(c.domain));
-  const deduplicated = deduplicateByDomain({
-    companies: [...validPappers, ...resolvedCompanies],
-  }).slice(0, maxResults);
+  const deduplicated = deduplicateByDomain([
+    ...validPappers,
+    ...resolvedCompanies,
+  ]).slice(0, maxResults);
 
   logger.info({ count: deduplicated.length }, "discover: companies collected");
   return { success: true, data: deduplicated };
 }
 
-async function discoverJobOffers({
-  criteria,
-  jobBoardProviders,
-}: DiscoverOptions): Promise<Result<JobPosting[]>> {
-  if (!jobBoardProviders?.length) {
-    return {
-      success: false,
-      error: new Error(
-        "No job board providers configured for job_offer discovery",
-      ),
-    };
-  }
+export async function discoverJobOffers(
+  options: DiscoverJobOffersOptions,
+): Promise<Result<JobPosting[]>> {
+  const { criteria, jobBoardProviders } = options;
 
   const postings = await runJobBoardSources({
     providers: jobBoardProviders,
     criteria,
   });
   const withContent = postings.filter((p) => p.description.trim().length > 0);
-  const deduplicated = deduplicateByUrl({ postings: withContent });
+  const deduplicated = deduplicateByUrl(withContent);
 
   logger.info({ count: deduplicated.length }, "discover: job offers collected");
   return { success: true, data: deduplicated };
-}
-
-export async function discover(
-  options: DiscoverOptions,
-): Promise<Result<CompanyData[] | JobPosting[]>> {
-  if (options.criteria.targetEntity === "job_offer") {
-    return discoverJobOffers(options);
-  }
-  return discoverCompanies(options);
 }

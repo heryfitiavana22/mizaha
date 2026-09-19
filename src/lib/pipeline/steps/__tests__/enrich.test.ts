@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EnrichedJobOffer } from "@/types";
-import { enrich } from "@/lib/pipeline/steps/enrich";
+import { enrichCompanies, enrichJobOffers } from "@/lib/pipeline/steps/enrich";
 import { fakeCompany, fakeQualifiedCompany } from "@/tests/fixtures/company";
 import { fakeQualifiedJobOffer } from "@/tests/fixtures/job-posting";
 import {
@@ -8,7 +7,7 @@ import {
   makeMockEmailProvider,
 } from "@/tests/mocks/providers";
 
-describe("enrich — company mode", () => {
+describe("enrichCompanies", () => {
   it("extracts contacts from scrapedContent when emails are present", async () => {
     const qualifiedWithContent = {
       ...fakeQualifiedCompany,
@@ -16,10 +15,8 @@ describe("enrich — company mode", () => {
         "Contact us at jobs@acme.fr or hello@acme.fr for more info.",
     };
 
-    const result = await enrich({
+    const result = await enrichCompanies({
       entities: [qualifiedWithContent],
-      targetEntity: "company",
-      company: makeMockCompanyProvider(),
       email: makeMockEmailProvider(),
     });
 
@@ -30,10 +27,8 @@ describe("enrich — company mode", () => {
   });
 
   it("falls back to email provider when no emails in scrapedContent", async () => {
-    const result = await enrich({
+    const result = await enrichCompanies({
       entities: [fakeQualifiedCompany],
-      targetEntity: "company",
-      company: makeMockCompanyProvider(),
       email: makeMockEmailProvider(),
     });
 
@@ -50,10 +45,8 @@ describe("enrich — company mode", () => {
         .mockResolvedValue({ success: false, error: new Error("API down") }),
     });
 
-    const result = await enrich({
+    const result = await enrichCompanies({
       entities: [fakeQualifiedCompany],
-      targetEntity: "company",
-      company: makeMockCompanyProvider(),
       email,
     });
 
@@ -63,10 +56,8 @@ describe("enrich — company mode", () => {
   });
 
   it("returns empty list when no entities are provided", async () => {
-    const result = await enrich({
+    const result = await enrichCompanies({
       entities: [],
-      targetEntity: "company",
-      company: makeMockCompanyProvider(),
       email: makeMockEmailProvider(),
     });
 
@@ -74,20 +65,17 @@ describe("enrich — company mode", () => {
   });
 });
 
-describe("enrich — job_offer mode", () => {
+describe("enrichJobOffers", () => {
   it("enriches job offer with company data from name lookup", async () => {
-    const result = await enrich({
+    const result = await enrichJobOffers({
       entities: [fakeQualifiedJobOffer],
-      targetEntity: "job_offer",
       company: makeMockCompanyProvider(),
-      email: makeMockEmailProvider(),
     });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    const offer = (result.data as EnrichedJobOffer[])[0];
-    expect(offer.company).toEqual(fakeCompany);
-    expect(offer.contacts).toEqual([]);
+    expect(result.data[0].company).toEqual(fakeCompany);
+    expect(result.data[0].contacts).toEqual([]);
   });
 
   it("sets company to undefined when findByName returns null", async () => {
@@ -95,16 +83,14 @@ describe("enrich — job_offer mode", () => {
       findByName: vi.fn().mockResolvedValue({ success: true, data: null }),
     });
 
-    const result = await enrich({
+    const result = await enrichJobOffers({
       entities: [fakeQualifiedJobOffer],
-      targetEntity: "job_offer",
       company,
-      email: makeMockEmailProvider(),
     });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect((result.data as EnrichedJobOffer[])[0].company).toBeUndefined();
+    expect(result.data[0].company).toBeUndefined();
   });
 
   it("sets company to undefined when findByName fails", async () => {
@@ -117,15 +103,13 @@ describe("enrich — job_offer mode", () => {
         }),
     });
 
-    const result = await enrich({
+    const result = await enrichJobOffers({
       entities: [fakeQualifiedJobOffer],
-      targetEntity: "job_offer",
       company,
-      email: makeMockEmailProvider(),
     });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect((result.data as EnrichedJobOffer[])[0].company).toBeUndefined();
+    expect(result.data[0].company).toBeUndefined();
   });
 });

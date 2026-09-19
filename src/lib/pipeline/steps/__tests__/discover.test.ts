@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CompanyData, JobPosting, SearchCriteria } from "@/types";
-import { discover } from "@/lib/pipeline/steps/discover";
+import type { CompanyData, JobPosting } from "@/types";
+import {
+  discoverCompanies,
+  discoverJobOffers,
+} from "@/lib/pipeline/steps/discover";
 import { fakeCompany } from "@/tests/fixtures/company";
 import { fakeJobPosting } from "@/tests/fixtures/job-posting";
 import { fakeCriteria } from "@/tests/fixtures/search";
@@ -11,25 +14,25 @@ import {
   makeMockSearchProvider,
 } from "@/tests/mocks/providers";
 
-const criteriaWithPappers: SearchCriteria = {
+const criteriaWithPappers = {
   ...fakeCriteria,
-  signalSources: ["pappers_search"],
+  signalSources: ["pappers_search" as const],
 };
 
-const criteriaWithBrave: SearchCriteria = {
+const criteriaWithBrave = {
   ...fakeCriteria,
-  signalSources: ["brave"],
+  signalSources: ["brave" as const],
 };
 
-const criteriaJobOffer: SearchCriteria = {
+const criteriaJobOffer = {
   ...fakeCriteria,
-  targetEntity: "job_offer",
-  signalSources: ["france_travail"],
+  targetEntity: "job_offer" as const,
+  signalSources: ["france_travail" as const],
 };
 
-describe("discover — company mode", () => {
+describe("discoverCompanies", () => {
   it("discovers companies from pappers and tags them with source pappers_search", async () => {
-    const result = await discover({
+    const result = await discoverCompanies({
       criteria: criteriaWithPappers,
       search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
@@ -52,7 +55,7 @@ describe("discover — company mode", () => {
         .mockResolvedValue({ success: true, data: [fakeJobPosting] }),
     });
 
-    const result = await discover({
+    const result = await discoverCompanies({
       criteria: { ...fakeCriteria, signalSources: ["france_travail"] },
       search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
@@ -68,7 +71,7 @@ describe("discover — company mode", () => {
   });
 
   it("discovers companies from brave and tags them with source brave", async () => {
-    const result = await discover({
+    const result = await discoverCompanies({
       criteria: criteriaWithBrave,
       search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
@@ -89,7 +92,7 @@ describe("discover — company mode", () => {
         .mockResolvedValue({ success: true, data: ["Acme SAS", "Acme"] }),
     });
 
-    const result = await discover({
+    const result = await discoverCompanies({
       criteria: criteriaWithBrave,
       search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
@@ -106,7 +109,7 @@ describe("discover — company mode", () => {
       search: vi.fn().mockResolvedValue({ success: true, data: [] }),
     });
 
-    const result = await discover({
+    const result = await discoverCompanies({
       criteria: criteriaWithBrave,
       search,
       company: makeMockCompanyProvider(),
@@ -125,7 +128,7 @@ describe("discover — company mode", () => {
         .mockResolvedValue({ success: true, data: [] }),
     });
 
-    const result = await discover({
+    const result = await discoverCompanies({
       criteria: criteriaWithBrave,
       search: makeMockSearchProvider(),
       company: makeMockCompanyProvider(),
@@ -140,7 +143,7 @@ describe("discover — company mode", () => {
   it("does not call brave search when brave is not in signalSources", async () => {
     const search = makeMockSearchProvider();
 
-    await discover({
+    await discoverCompanies({
       criteria: criteriaWithPappers,
       search,
       company: makeMockCompanyProvider(),
@@ -151,15 +154,12 @@ describe("discover — company mode", () => {
   });
 });
 
-describe("discover — job_offer mode", () => {
+describe("discoverJobOffers", () => {
   it("returns JobPosting[] from job board providers", async () => {
     const jobBoard = makeMockJobBoardProvider();
 
-    const result = await discover({
+    const result = await discoverJobOffers({
       criteria: criteriaJobOffer,
-      search: makeMockSearchProvider(),
-      company: makeMockCompanyProvider(),
-      llm: makeMockLLMProvider(),
       jobBoardProviders: [jobBoard],
     });
 
@@ -175,16 +175,10 @@ describe("discover — job_offer mode", () => {
     const jobBoard1 = makeMockJobBoardProvider({
       signalSource: "france_travail",
     });
-    const jobBoard2 = makeMockJobBoardProvider({ signalSource: "wttj" });
+    const jobBoard2 = makeMockJobBoardProvider({ signalSource: "free_work" });
 
-    const result = await discover({
-      criteria: {
-        ...criteriaJobOffer,
-        signalSources: ["france_travail", "wttj"],
-      },
-      search: makeMockSearchProvider(),
-      company: makeMockCompanyProvider(),
-      llm: makeMockLLMProvider(),
+    const result = await discoverJobOffers({
+      criteria: criteriaJobOffer,
       jobBoardProviders: [jobBoard1, jobBoard2],
     });
 
@@ -193,15 +187,15 @@ describe("discover — job_offer mode", () => {
     expect(result.data).toHaveLength(1);
   });
 
-  it("returns failure when no job board providers are configured", async () => {
-    const result = await discover({
+  it("returns empty when no job board providers are provided", async () => {
+    const result = await discoverJobOffers({
       criteria: criteriaJobOffer,
-      search: makeMockSearchProvider(),
-      company: makeMockCompanyProvider(),
-      llm: makeMockLLMProvider(),
+      jobBoardProviders: [],
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toHaveLength(0);
   });
 
   it("continues when one job board provider fails", async () => {
@@ -210,13 +204,12 @@ describe("discover — job_offer mode", () => {
         .fn()
         .mockResolvedValue({ success: false, error: new Error("API down") }),
     });
-    const workingBoard = makeMockJobBoardProvider({ signalSource: "wttj" });
+    const workingBoard = makeMockJobBoardProvider({
+      signalSource: "free_work",
+    });
 
-    const result = await discover({
+    const result = await discoverJobOffers({
       criteria: criteriaJobOffer,
-      search: makeMockSearchProvider(),
-      company: makeMockCompanyProvider(),
-      llm: makeMockLLMProvider(),
       jobBoardProviders: [failingBoard, workingBoard],
     });
 

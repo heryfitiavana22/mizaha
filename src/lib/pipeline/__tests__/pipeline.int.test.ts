@@ -26,10 +26,10 @@ const { getUseCase } = await import("@/lib/use-cases");
 
 function makeTestProviders() {
   return {
-    search: { primary: makeMockSearchProvider() },
-    company: { primary: makeMockCompanyProvider() },
-    scraper: { primary: makeMockScraperProvider() },
-    email: { primary: makeMockEmailProvider() },
+    search: makeMockSearchProvider(),
+    company: makeMockCompanyProvider(),
+    scraper: makeMockScraperProvider(),
+    email: makeMockEmailProvider(),
     llm: makeMockLLMProvider(),
   };
 }

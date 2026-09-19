@@ -13,13 +13,9 @@ import {
   buildQualifyPrompt,
   qualificationResultSchema,
 } from "@/lib/ai/prompts/qualify";
-import { buildGenerateDraftPrompt } from "@/lib/ai/prompts/generate-draft";
-import type {
-  ExtractCriteriaInput,
-  GenerateDraftInput,
-  LLMProvider,
-  QualifyInput,
-} from "@/lib/providers/interfaces/llm";
+import type { ExtractCriteriaInput } from "@/lib/providers/interfaces/text-extractor";
+import type { QualifyInput } from "@/lib/providers/interfaces/entity-scorer";
+import type { LLMProvider } from "@/lib/providers/interfaces/llm";
 import type {
   QualificationResult,
   Result,
@@ -27,8 +23,7 @@ import type {
   SearchResult,
 } from "@/types";
 
-const MAX_OUTPUT_TOKENS_STRUCTURED = 512;
-const MAX_OUTPUT_TOKENS_DRAFT = 1024;
+const MAX_OUTPUT_TOKENS = 512;
 
 export class VercelLLMProvider implements LLMProvider {
   readonly name: string;
@@ -46,15 +41,13 @@ export class VercelLLMProvider implements LLMProvider {
     uiCriteria,
   }: ExtractCriteriaInput): Promise<Result<SearchCriteria>> {
     const start = Date.now();
-
     try {
       const { output } = await generateText({
         model: this.model,
         output: Output.object({ schema: searchCriteriaSchema }),
-        maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
         prompt: buildExtractCriteriaPrompt({ rawQuery, useCase, uiCriteria }),
       });
-
       logger.info(
         {
           provider: this.modelName,
@@ -64,7 +57,6 @@ export class VercelLLMProvider implements LLMProvider {
         },
         "API call completed",
       );
-
       return { success: true, data: output };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -86,15 +78,13 @@ export class VercelLLMProvider implements LLMProvider {
     results: SearchResult[],
   ): Promise<Result<string[]>> {
     const start = Date.now();
-
     try {
       const { output } = await generateText({
         model: this.model,
         output: Output.object({ schema: extractedCompanyNamesSchema }),
-        maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
         prompt: buildExtractCompanyNamesPrompt({ results }),
       });
-
       logger.info(
         {
           provider: this.modelName,
@@ -105,7 +95,6 @@ export class VercelLLMProvider implements LLMProvider {
         },
         "API call completed",
       );
-
       return { success: true, data: output.companyNames };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -129,15 +118,13 @@ export class VercelLLMProvider implements LLMProvider {
     scrapedContent,
   }: QualifyInput): Promise<Result<QualificationResult>> {
     const start = Date.now();
-
     try {
       const { output } = await generateText({
         model: this.model,
         output: Output.object({ schema: qualificationResultSchema }),
-        maxOutputTokens: MAX_OUTPUT_TOKENS_STRUCTURED,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
         prompt: buildQualifyPrompt({ entity, criteria, scrapedContent }),
       });
-
       logger.info(
         {
           provider: this.modelName,
@@ -147,7 +134,6 @@ export class VercelLLMProvider implements LLMProvider {
         },
         "API call completed",
       );
-
       return { success: true, data: output };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -155,46 +141,6 @@ export class VercelLLMProvider implements LLMProvider {
         {
           provider: this.modelName,
           method: "qualify",
-          durationMs: Date.now() - start,
-          status: "error",
-          error: err.message,
-        },
-        "API call failed",
-      );
-      return { success: false, error: err };
-    }
-  }
-
-  async generateDraft({
-    contact,
-    companyContext,
-  }: GenerateDraftInput): Promise<Result<string>> {
-    const start = Date.now();
-
-    try {
-      const { text } = await generateText({
-        model: this.model,
-        maxOutputTokens: MAX_OUTPUT_TOKENS_DRAFT,
-        prompt: buildGenerateDraftPrompt({ contact, companyContext }),
-      });
-
-      logger.info(
-        {
-          provider: this.modelName,
-          method: "generateDraft",
-          durationMs: Date.now() - start,
-          status: "success",
-        },
-        "API call completed",
-      );
-
-      return { success: true, data: text };
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error(
-        {
-          provider: this.modelName,
-          method: "generateDraft",
           durationMs: Date.now() - start,
           status: "error",
           error: err.message,

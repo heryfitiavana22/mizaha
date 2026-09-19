@@ -2,7 +2,7 @@ import { openai } from "@ai-sdk/openai";
 import { SireneCompanyProvider } from "@/lib/providers/company/sirene";
 import { FirecrawlEmailProvider } from "@/lib/providers/email/firecrawl";
 import { FranceTravailProvider } from "@/lib/providers/job-board/france-travail";
-import { WttjProvider } from "@/lib/providers/job-board/wttj";
+import { WttjCompanyProvider } from "@/lib/providers/job-board/wttj-company";
 import { VercelLLMProvider } from "@/lib/providers/llm/vercel";
 import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
 import { BraveSearchProvider } from "@/lib/providers/search/brave";
@@ -17,25 +17,15 @@ export const freelanceClientConfig: UseCaseConfig = {
   enrichStrategy: "domain",
   maxResults: 30,
   providers: {
-    search: {
-      primary: new BraveSearchProvider(),
-    },
-    company: {
-      primary: new SireneCompanyProvider(),
-    },
-    scraper: {
-      primary: new FirecrawlScraperProvider(),
-    },
-    email: {
-      primary: new FirecrawlEmailProvider(
-        new BraveSearchProvider(),
-        new FirecrawlScraperProvider(),
-      ),
-    },
-    jobBoard: {
-      primary: new WttjProvider(),
-      backup: new FranceTravailProvider(),
-    },
+    search: new BraveSearchProvider(),
+    company: new SireneCompanyProvider(),
+    scraper: new FirecrawlScraperProvider(),
+    email: new FirecrawlEmailProvider(
+      new BraveSearchProvider(),
+      new FirecrawlScraperProvider(),
+    ),
+    jobBoard: [new FranceTravailProvider()],
+    companySignals: [new WttjCompanyProvider()],
     llm: new VercelLLMProvider(openai(OPENAI_MODEL_ID), OPENAI_MODEL_ID),
   },
 };

@@ -18,25 +18,14 @@ export const findJobsConfig: UseCaseConfig = {
   enrichStrategy: "domain",
   maxResults: 30,
   providers: {
-    search: {
-      primary: new BraveSearchProvider(),
-    },
-    company: {
-      primary: new SireneCompanyProvider(),
-    },
-    scraper: {
-      primary: new FirecrawlScraperProvider(),
-    },
-    email: {
-      primary: new FirecrawlEmailProvider(
-        new BraveSearchProvider(),
-        new FirecrawlScraperProvider(),
-      ),
-    },
-    jobBoard: {
-      primary: new FreeWorkProvider(),
-      backup: new FranceTravailProvider(),
-    },
+    search: new BraveSearchProvider(),
+    company: new SireneCompanyProvider(),
+    scraper: new FirecrawlScraperProvider(),
+    email: new FirecrawlEmailProvider(
+      new BraveSearchProvider(),
+      new FirecrawlScraperProvider(),
+    ),
+    jobBoard: [new FreeWorkProvider(), new FranceTravailProvider()],
     llm: new VercelLLMProvider(openai(OPENAI_MODEL_ID), OPENAI_MODEL_ID),
   },
 };

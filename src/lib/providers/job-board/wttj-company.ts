@@ -1,9 +1,10 @@
 import logger from "@/lib/logger";
 import type {
-  JobBoardProvider,
-  JobSearchCriteria,
-} from "@/lib/providers/interfaces/job-board";
-import type { JobPosting, Result } from "@/types";
+  CompanyDiscoveryCriteria,
+  CompanySignal,
+  CompanySignalProvider,
+} from "@/lib/providers/interfaces/company-signal";
+import type { Result } from "@/types";
 
 // Public client-side keys exposed in WTTJ's page HTML — not secrets
 const ALGOLIA_APP_ID = "CSEKHVMS53";
@@ -54,45 +55,43 @@ async function fetchWttjCompanies({
   return data.hits ?? [];
 }
 
-export class WttjProvider implements JobBoardProvider {
+export class WttjCompanyProvider implements CompanySignalProvider {
   readonly name = "WTTJ";
   readonly signalSource = "wttj" as const;
 
-  async searchJobs(criteria: JobSearchCriteria): Promise<Result<JobPosting[]>> {
+  async discoverCompanies(
+    criteria: CompanyDiscoveryCriteria,
+  ): Promise<Result<CompanySignal[]>> {
     const start = Date.now();
-    const keywords = criteria.keywords ?? criteria.techStack ?? [];
+    const keywords = criteria.keywords ?? [];
     const limit = criteria.limit ?? DEFAULT_LIMIT;
 
     try {
       const hits = await fetchWttjCompanies({ keywords, limit });
 
-      const postings: JobPosting[] = hits.map((hit) => ({
-        title: "",
+      const signals: CompanySignal[] = hits.map((hit) => ({
         companyName: hit.name,
-        location: "France",
-        contractType: "",
-        description: "",
-        url: `https://www.welcometothejungle.com/fr/companies/${hit.slug}`,
+        profileUrl: `https://www.welcometothejungle.com/fr/companies/${hit.slug}`,
       }));
 
       logger.info(
         {
           provider: "wttj",
-          method: "searchJobs",
+          method: "discoverCompanies",
           durationMs: Date.now() - start,
           status: "success",
-          count: postings.length,
+          count: signals.length,
         },
         "API call completed",
       );
 
-      return { success: true, data: postings };
+      return { success: true, data: signals };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error(
         {
           provider: "wttj",
-          method: "searchJobs",
+          method: "discoverCompanies",
           durationMs: Date.now() - start,
           status: "error",
           error: err.message,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WttjProvider } from "@/lib/providers/job-board/wttj";
+import { WttjCompanyProvider } from "@/lib/providers/job-board/wttj-company";
 
 function makeAlgoliaResponse(
   hits: { name: string; slug: string; jobs_count: number }[],
@@ -10,17 +10,17 @@ function makeAlgoliaResponse(
   });
 }
 
-describe("WttjProvider", () => {
+describe("WttjCompanyProvider", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it("has signalSource wttj", () => {
-    expect(new WttjProvider().signalSource).toBe("wttj");
+    expect(new WttjCompanyProvider().signalSource).toBe("wttj");
   });
 
-  describe("searchJobs", () => {
-    it("returns JobPosting[] from Algolia hits", async () => {
+  describe("discoverCompanies", () => {
+    it("returns CompanySignal[] from Algolia hits", async () => {
       vi.spyOn(global, "fetch").mockResolvedValue(
         makeAlgoliaResponse([
           { name: "Theodo", slug: "theodo", jobs_count: 5 },
@@ -28,21 +28,21 @@ describe("WttjProvider", () => {
         ]),
       );
 
-      const provider = new WttjProvider();
-      const result = await provider.searchJobs({ keywords: ["React"] });
+      const provider = new WttjCompanyProvider();
+      const result = await provider.discoverCompanies({ keywords: ["React"] });
 
       expect(result.success).toBe(true);
       if (!result.success) return;
       expect(result.data).toHaveLength(2);
       expect(result.data[0].companyName).toBe("Theodo");
-      expect(result.data[0].url).toContain("theodo");
+      expect(result.data[0].profileUrl).toContain("theodo");
       expect(result.data[1].companyName).toBe("Alan");
     });
 
     it("returns failure when fetch throws", async () => {
       vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network error"));
 
-      const result = await new WttjProvider().searchJobs({});
+      const result = await new WttjCompanyProvider().discoverCompanies({});
       expect(result.success).toBe(false);
     });
 
@@ -51,7 +51,7 @@ describe("WttjProvider", () => {
         new Response(JSON.stringify({ message: "Forbidden" }), { status: 403 }),
       );
 
-      const result = await new WttjProvider().searchJobs({});
+      const result = await new WttjCompanyProvider().discoverCompanies({});
       expect(result.success).toBe(false);
     });
 
@@ -64,19 +64,23 @@ describe("WttjProvider", () => {
         ]),
       );
 
-      const result = await new WttjProvider().searchJobs({ limit: 2 });
+      const result = await new WttjCompanyProvider().discoverCompanies({
+        limit: 2,
+      });
       expect(result.success).toBe(true);
       if (!result.success) return;
       // Algolia handles limit via hitsPerPage — result matches what API returns
       expect(result.data).toHaveLength(3);
     });
 
-    it("uses techStack as keywords fallback", async () => {
+    it("uses keywords to query Algolia", async () => {
       const spy = vi
         .spyOn(global, "fetch")
         .mockResolvedValue(makeAlgoliaResponse([]));
 
-      await new WttjProvider().searchJobs({ techStack: ["TypeScript"] });
+      await new WttjCompanyProvider().discoverCompanies({
+        keywords: ["TypeScript"],
+      });
 
       const body = JSON.parse(
         (spy.mock.calls[0][1] as RequestInit).body as string,

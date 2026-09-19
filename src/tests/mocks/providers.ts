@@ -1,10 +1,13 @@
 import { vi } from "vitest";
 import type { CompanyProvider } from "@/lib/providers/interfaces/company";
+import type { CompanySignalProvider } from "@/lib/providers/interfaces/company-signal";
 import type { EmailProvider } from "@/lib/providers/interfaces/email";
+import type { EntityScorerProvider } from "@/lib/providers/interfaces/entity-scorer";
 import type { JobBoardProvider } from "@/lib/providers/interfaces/job-board";
 import type { LLMProvider } from "@/lib/providers/interfaces/llm";
 import type { ScraperProvider } from "@/lib/providers/interfaces/scraper";
 import type { SearchProvider } from "@/lib/providers/interfaces/search";
+import type { TextExtractorProvider } from "@/lib/providers/interfaces/text-extractor";
 import { fakeCompany, fakeQualifiedCompany } from "@/tests/fixtures/company";
 import { fakeJobPosting } from "@/tests/fixtures/job-posting";
 import { fakeCriteria } from "@/tests/fixtures/search";
@@ -91,24 +94,54 @@ export function makeMockJobBoardProvider(
   };
 }
 
-export function makeMockLLMProvider(
-  overrides?: Partial<LLMProvider>,
-): LLMProvider {
+export function makeMockCompanySignalProvider(
+  overrides?: Partial<CompanySignalProvider>,
+): CompanySignalProvider {
   return {
-    name: "MockLLM",
+    name: "MockCompanySignal",
+    signalSource: "wttj",
+    discoverCompanies: vi.fn().mockResolvedValue({
+      success: true,
+      data: [{ companyName: "Acme SAS", profileUrl: "https://wttj.co/acme" }],
+    }),
+    ...overrides,
+  };
+}
+
+export function makeMockTextExtractorProvider(
+  overrides?: Partial<TextExtractorProvider>,
+): TextExtractorProvider {
+  return {
+    name: "MockTextExtractor",
     extractCriteria: vi
       .fn()
       .mockResolvedValue({ success: true, data: fakeCriteria }),
     extractCompanyNames: vi
       .fn()
       .mockResolvedValue({ success: true, data: ["Acme SAS"] }),
+    ...overrides,
+  };
+}
+
+export function makeMockEntityScorerProvider(
+  overrides?: Partial<EntityScorerProvider>,
+): EntityScorerProvider {
+  return {
+    name: "MockEntityScorer",
     qualify: vi.fn().mockResolvedValue({
       success: true,
       data: fakeQualifiedCompany.qualification,
     }),
-    generateDraft: vi
-      .fn()
-      .mockResolvedValue({ success: true, data: "Bonjour Alice," }),
+    ...overrides,
+  };
+}
+
+export function makeMockLLMProvider(
+  overrides?: Partial<LLMProvider>,
+): LLMProvider {
+  return {
+    ...makeMockTextExtractorProvider(),
+    ...makeMockEntityScorerProvider(),
     ...overrides,
   };
 }

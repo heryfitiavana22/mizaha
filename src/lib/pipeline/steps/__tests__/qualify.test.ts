@@ -4,12 +4,16 @@ import type {
   QualifiedJobOffer,
   SearchCriteria,
 } from "@/types";
-import { qualify } from "@/lib/pipeline/steps/qualify";
+import {
+  companyQualifyStrategy,
+  jobOfferQualifyStrategy,
+  qualify,
+} from "@/lib/pipeline/steps/qualify";
 import { fakeCompany } from "@/tests/fixtures/company";
 import { fakeJobPosting } from "@/tests/fixtures/job-posting";
 import { fakeCriteria } from "@/tests/fixtures/search";
 import {
-  makeMockLLMProvider,
+  makeMockEntityScorerProvider,
   makeMockScraperProvider,
 } from "@/tests/mocks/providers";
 
@@ -24,7 +28,8 @@ describe("qualify — company mode", () => {
       entities: [fakeCompany],
       criteria: fakeCriteria,
       scraper: makeMockScraperProvider(),
-      llm: makeMockLLMProvider(),
+      llm: makeMockEntityScorerProvider(),
+      strategy: companyQualifyStrategy,
     });
 
     expect(result.success).toBe(true);
@@ -59,7 +64,8 @@ describe("qualify — company mode", () => {
       entities: [fakeCompany, anotherCompany],
       criteria: fakeCriteria,
       scraper,
-      llm: makeMockLLMProvider(),
+      llm: makeMockEntityScorerProvider(),
+      strategy: companyQualifyStrategy,
     });
 
     expect(result.success).toBe(true);
@@ -69,7 +75,7 @@ describe("qualify — company mode", () => {
   });
 
   it("skips company when LLM qualification fails", async () => {
-    const llm = makeMockLLMProvider({
+    const llm = makeMockEntityScorerProvider({
       qualify: vi
         .fn()
         .mockResolvedValue({ success: false, error: new Error("LLM down") }),
@@ -80,6 +86,7 @@ describe("qualify — company mode", () => {
       criteria: fakeCriteria,
       scraper: makeMockScraperProvider(),
       llm,
+      strategy: companyQualifyStrategy,
     });
 
     expect(result.success).toBe(true);
@@ -88,7 +95,7 @@ describe("qualify — company mode", () => {
   });
 
   it("filters out companies below the 0.5 score threshold", async () => {
-    const llm = makeMockLLMProvider({
+    const llm = makeMockEntityScorerProvider({
       qualify: vi.fn().mockResolvedValue({
         success: true,
         data: { score: 0.3, reason: "Not relevant", matchedCriteria: [] },
@@ -100,6 +107,7 @@ describe("qualify — company mode", () => {
       criteria: fakeCriteria,
       scraper: makeMockScraperProvider(),
       llm,
+      strategy: companyQualifyStrategy,
     });
 
     expect(result.success).toBe(true);
@@ -112,7 +120,8 @@ describe("qualify — company mode", () => {
       entities: [],
       criteria: fakeCriteria,
       scraper: makeMockScraperProvider(),
-      llm: makeMockLLMProvider(),
+      llm: makeMockEntityScorerProvider(),
+      strategy: companyQualifyStrategy,
     });
 
     expect(result).toEqual({ success: true, data: [] });
@@ -127,7 +136,8 @@ describe("qualify — job_offer mode", () => {
       entities: [fakeJobPosting],
       criteria: criteriaJobOffer,
       scraper,
-      llm: makeMockLLMProvider(),
+      llm: makeMockEntityScorerProvider(),
+      strategy: jobOfferQualifyStrategy,
     });
 
     expect(result.success).toBe(true);
@@ -139,7 +149,7 @@ describe("qualify — job_offer mode", () => {
   });
 
   it("skips job offer when LLM qualification fails", async () => {
-    const llm = makeMockLLMProvider({
+    const llm = makeMockEntityScorerProvider({
       qualify: vi
         .fn()
         .mockResolvedValue({ success: false, error: new Error("LLM down") }),
@@ -150,6 +160,7 @@ describe("qualify — job_offer mode", () => {
       criteria: criteriaJobOffer,
       scraper: makeMockScraperProvider(),
       llm,
+      strategy: jobOfferQualifyStrategy,
     });
 
     expect(result.success).toBe(true);
@@ -158,7 +169,7 @@ describe("qualify — job_offer mode", () => {
   });
 
   it("filters out job offers below the 0.5 score threshold", async () => {
-    const llm = makeMockLLMProvider({
+    const llm = makeMockEntityScorerProvider({
       qualify: vi.fn().mockResolvedValue({
         success: true,
         data: { score: 0.2, reason: "Not matching", matchedCriteria: [] },
@@ -170,6 +181,7 @@ describe("qualify — job_offer mode", () => {
       criteria: criteriaJobOffer,
       scraper: makeMockScraperProvider(),
       llm,
+      strategy: jobOfferQualifyStrategy,
     });
 
     expect(result.success).toBe(true);

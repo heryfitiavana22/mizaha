@@ -11,11 +11,14 @@ import type {
 
 const MAX_CONTACTS = 3;
 
-export type EnrichOptions = {
-  entities: QualifiedCompany[] | QualifiedJobOffer[];
-  targetEntity: "company" | "job_offer";
-  company: CompanyProvider;
+export type EnrichCompaniesOptions = {
+  entities: QualifiedCompany[];
   email: EmailProvider;
+};
+
+export type EnrichJobOffersOptions = {
+  entities: QualifiedJobOffer[];
+  company: CompanyProvider;
 };
 
 function extractEmailsFromContent({
@@ -73,19 +76,16 @@ async function enrichOneJobOffer({
   return { ...offer, company: companyData, contacts: [] };
 }
 
-async function enrichCompanies({
-  companies,
+export async function enrichCompanies({
+  entities,
   email,
-}: {
-  companies: QualifiedCompany[];
-  email: EmailProvider;
-}): Promise<Result<EnrichedCompany[]>> {
+}: EnrichCompaniesOptions): Promise<Result<EnrichedCompany[]>> {
   const settlements = await Promise.allSettled(
-    companies.map((company) => enrichOneCompany({ company, email })),
+    entities.map((company) => enrichOneCompany({ company, email })),
   );
   const enriched = settlements
-    .filter((settlement) => settlement.status === "fulfilled")
-    .map((settlement) => settlement.value);
+    .filter((s) => s.status === "fulfilled")
+    .map((s) => (s as PromiseFulfilledResult<EnrichedCompany>).value);
   return { success: true, data: enriched };
 }
 
@@ -93,17 +93,14 @@ async function enrichCompanies({
 const SIRENE_CONCURRENCY = 3;
 const SIRENE_CHUNK_DELAY_MS = 150;
 
-async function enrichJobOffers({
-  offers,
+export async function enrichJobOffers({
+  entities,
   company,
-}: {
-  offers: QualifiedJobOffer[];
-  company: CompanyProvider;
-}): Promise<Result<EnrichedJobOffer[]>> {
+}: EnrichJobOffersOptions): Promise<Result<EnrichedJobOffer[]>> {
   const enriched: EnrichedJobOffer[] = [];
-  for (let i = 0; i < offers.length; i += SIRENE_CONCURRENCY) {
+  for (let i = 0; i < entities.length; i += SIRENE_CONCURRENCY) {
     if (i > 0) await new Promise((r) => setTimeout(r, SIRENE_CHUNK_DELAY_MS));
-    const chunk = offers.slice(i, i + SIRENE_CONCURRENCY);
+    const chunk = entities.slice(i, i + SIRENE_CONCURRENCY);
     const results = await Promise.allSettled(
       chunk.map((offer) => enrichOneJobOffer({ offer, company })),
     );
@@ -115,19 +112,4 @@ async function enrichJobOffers({
     }
   }
   return { success: true, data: enriched };
-}
-
-export async function enrich({
-  entities,
-  targetEntity,
-  company,
-  email,
-}: EnrichOptions): Promise<Result<EnrichedCompany[] | EnrichedJobOffer[]>> {
-  if (targetEntity === "job_offer") {
-    return enrichJobOffers({
-      offers: entities as QualifiedJobOffer[],
-      company,
-    });
-  }
-  return enrichCompanies({ companies: entities as QualifiedCompany[], email });
 }

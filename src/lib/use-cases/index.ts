@@ -1,4 +1,5 @@
 import type { CompanyProvider } from "@/lib/providers/interfaces/company";
+import type { CompanySignalProvider } from "@/lib/providers/interfaces/company-signal";
 import type { EmailProvider } from "@/lib/providers/interfaces/email";
 import type { JobBoardProvider } from "@/lib/providers/interfaces/job-board";
 import type { LLMProvider } from "@/lib/providers/interfaces/llm";
@@ -9,11 +10,12 @@ import { findJobsConfig } from "./find-jobs";
 import { freelanceClientConfig } from "./freelance-client";
 
 export type UseCaseProviders = {
-  search: { primary: SearchProvider; backup?: SearchProvider };
-  company: { primary: CompanyProvider; backup?: CompanyProvider };
-  scraper: { primary: ScraperProvider; backup?: ScraperProvider };
-  email: { primary: EmailProvider; backup?: EmailProvider };
-  jobBoard?: { primary: JobBoardProvider; backup?: JobBoardProvider };
+  search: SearchProvider;
+  company: CompanyProvider;
+  scraper: ScraperProvider;
+  email: EmailProvider;
+  jobBoard?: JobBoardProvider[];
+  companySignals?: CompanySignalProvider[];
   llm: LLMProvider;
 };
 

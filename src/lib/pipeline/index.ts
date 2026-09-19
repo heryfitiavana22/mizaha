@@ -11,8 +11,6 @@ import {
 import logger from "@/lib/logger";
 import type { UseCaseProviders } from "@/lib/use-cases";
 import { getUseCase } from "@/lib/use-cases";
-import type { JobBoardProvider } from "@/lib/providers/interfaces/job-board";
-import type { CompanyProvider } from "@/lib/providers/interfaces/company";
 import type {
   CompanyData,
   Contact,
@@ -24,10 +22,13 @@ import type {
   Result,
   SearchCriteria,
 } from "@/types";
-import { discover } from "./steps/discover";
-import { enrich } from "./steps/enrich";
-import { extractCriteria } from "./steps/extract-criteria";
-import { qualify } from "./steps/qualify";
+import { discoverCompanies, discoverJobOffers } from "./steps/discover";
+import { enrichCompanies, enrichJobOffers } from "./steps/enrich";
+import {
+  companyQualifyStrategy,
+  jobOfferQualifyStrategy,
+  qualify,
+} from "./steps/qualify";
 
 type PipelineStep = "extract-criteria" | "discover" | "qualify" | "enrich";
 type SearchStatus = "pending" | "running" | "completed" | "failed";
@@ -336,97 +337,6 @@ async function saveOneJobOffer({
   return { success: true, data: undefined };
 }
 
-async function saveResults({
-  searchId,
-  results,
-  targetEntity,
-}: {
-  searchId: string;
-  results: EnrichedCompany[] | EnrichedJobOffer[];
-  targetEntity: "company" | "job_offer";
-}): Promise<Result<undefined>> {
-  if (targetEntity === "job_offer") {
-    for (const offer of results as EnrichedJobOffer[]) {
-      const result = await saveOneJobOffer({ searchId, offer });
-      if (!result.success)
-        logger.error(
-          { url: offer.url, error: result.error.message },
-          "Failed to save job offer — skipping",
-        );
-    }
-  } else {
-    for (const company of results as EnrichedCompany[]) {
-      const result = await saveOneCompany({ searchId, company });
-      if (!result.success)
-        logger.error(
-          { domain: company.domain, error: result.error.message },
-          "Failed to save company — skipping",
-        );
-    }
-  }
-  return { success: true, data: undefined };
-}
-
-// Level 1 — primary provider fails → try backup automatically
-async function withFallback<TProvider, TData>({
-  primary,
-  backup,
-  run,
-  onFallback,
-}: {
-  primary: TProvider;
-  backup: TProvider | undefined;
-  run: (provider: TProvider) => Promise<Result<TData>>;
-  onFallback?: () => void;
-}): Promise<Result<TData>> {
-  const primaryResult = await run(primary);
-  if (primaryResult.success || !backup) return primaryResult;
-  logger.warn("Primary provider failed — trying backup");
-  onFallback?.();
-  return run(backup);
-}
-
-// Wraps primary + backup into one CompanyProvider so steps get per-call fallback transparently.
-function createFallbackCompanyProvider({
-  primary,
-  backup,
-}: {
-  primary: CompanyProvider;
-  backup: CompanyProvider | undefined;
-}): CompanyProvider {
-  if (!backup) return primary;
-  return {
-    name: `${primary.name} + ${backup.name}`,
-    findByDomain: async (domain) => {
-      const result = await primary.findByDomain(domain);
-      if (result.success) return result;
-      logger.warn(
-        { domain, error: result.error.message },
-        "Primary company provider failed — trying backup",
-      );
-      return backup.findByDomain(domain);
-    },
-    findByName: async (name) => {
-      const result = await primary.findByName(name);
-      if (result.success) return result;
-      logger.warn(
-        { name, error: result.error.message },
-        "Primary company provider failed — trying backup",
-      );
-      return backup.findByName(name);
-    },
-    search: async (criteria) => {
-      const result = await primary.search(criteria);
-      if (result.success) return result;
-      logger.warn(
-        { error: result.error.message },
-        "Primary company provider failed — trying backup",
-      );
-      return backup.search(criteria);
-    },
-  };
-}
-
 async function trackStep<TData>({
   searchId,
   step,
@@ -460,126 +370,6 @@ async function trackStep<TData>({
   return result;
 }
 
-async function runExtractCriteria({
-  searchId,
-  rawQuery,
-  useCaseName,
-  llm,
-  uiCriteria,
-}: {
-  searchId: string;
-  rawQuery: string;
-  useCaseName: string;
-  llm: UseCaseProviders["llm"];
-  uiCriteria?: Record<string, unknown>;
-}): Promise<Result<SearchCriteria>> {
-  return trackStep({
-    searchId,
-    step: "extract-criteria",
-    inputData: { rawQuery, uiCriteria },
-    run: () =>
-      extractCriteria({ rawQuery, useCase: useCaseName, llm, uiCriteria }),
-  });
-}
-
-async function runDiscover({
-  searchId,
-  criteria,
-  providers,
-}: {
-  searchId: string;
-  criteria: SearchCriteria;
-  providers: UseCaseProviders;
-}): Promise<Result<CompanyData[] | JobPosting[]>> {
-  const company = createFallbackCompanyProvider({
-    primary: providers.company.primary,
-    backup: providers.company.backup,
-  });
-  const jobBoardProviders = [
-    providers.jobBoard?.primary,
-    providers.jobBoard?.backup,
-  ].filter((provider): provider is JobBoardProvider => provider !== undefined);
-
-  return trackStep({
-    searchId,
-    step: "discover",
-    inputData: {
-      signalSources: criteria.signalSources,
-      targetEntity: criteria.targetEntity,
-    },
-    run: () =>
-      withFallback({
-        primary: providers.search.primary,
-        backup: providers.search.backup,
-        run: (search) =>
-          discover({
-            criteria,
-            search,
-            company,
-            llm: providers.llm,
-            jobBoardProviders,
-          }),
-      }),
-  });
-}
-
-async function runQualify({
-  searchId,
-  entities,
-  criteria,
-  providers,
-}: {
-  searchId: string;
-  entities: CompanyData[] | JobPosting[];
-  criteria: SearchCriteria;
-  providers: UseCaseProviders;
-}): Promise<Result<QualifiedCompany[] | QualifiedJobOffer[]>> {
-  return trackStep({
-    searchId,
-    step: "qualify",
-    inputData: {
-      entityCount: entities.length,
-      targetEntity: criteria.targetEntity,
-    },
-    run: () =>
-      qualify({
-        entities,
-        criteria,
-        scraper: providers.scraper.primary,
-        llm: providers.llm,
-      }),
-  });
-}
-
-async function runEnrich({
-  searchId,
-  entities,
-  providers,
-  targetEntity,
-}: {
-  searchId: string;
-  entities: QualifiedCompany[] | QualifiedJobOffer[];
-  providers: UseCaseProviders;
-  targetEntity: "company" | "job_offer";
-}): Promise<Result<EnrichedCompany[] | EnrichedJobOffer[]>> {
-  const company = createFallbackCompanyProvider({
-    primary: providers.company.primary,
-    backup: providers.company.backup,
-  });
-  return trackStep({
-    searchId,
-    step: "enrich",
-    inputData: { entityCount: entities.length, targetEntity },
-    run: () =>
-      enrich({
-        entities,
-        targetEntity,
-        company,
-        email: providers.email.primary,
-      }),
-  });
-}
-
 async function persistCriteria({
   searchId,
   criteria,
@@ -598,7 +388,7 @@ async function persistCriteria({
   }
 }
 
-async function runSteps({
+async function runCompanyPipeline({
   searchId,
   criteria,
   providers,
@@ -606,35 +396,164 @@ async function runSteps({
   searchId: string;
   criteria: SearchCriteria;
   providers: UseCaseProviders;
-}): Promise<EnrichedCompany[] | EnrichedJobOffer[]> {
-  // Level 2 — never crash, continue with empty on failure
-  const discoverResult = await runDiscover({ searchId, criteria, providers });
+}): Promise<EnrichedCompany[]> {
+  // Level 2 — never crash, continue with empty on step failure
+
+  const discoverResult = await trackStep({
+    searchId,
+    step: "discover",
+    inputData: {
+      signalSources: criteria.signalSources,
+      targetEntity: "company",
+    },
+    run: () =>
+      discoverCompanies({
+        criteria,
+        search: providers.search,
+        company: providers.company,
+        llm: providers.llm,
+        jobBoardProviders: providers.jobBoard,
+        companySignals: providers.companySignals,
+      }),
+  });
   if (!discoverResult.success)
     logger.warn(
       { searchId },
       "Discover failed — continuing with empty results",
     );
-  const discovered = discoverResult.success ? discoverResult.data : [];
+  const discovered: CompanyData[] = discoverResult.success
+    ? discoverResult.data
+    : [];
 
-  const qualifyResult = await runQualify({
+  const qualifyResult = await trackStep({
     searchId,
-    entities: discovered,
-    criteria,
-    providers,
+    step: "qualify",
+    inputData: { entityCount: discovered.length, targetEntity: "company" },
+    run: () =>
+      qualify({
+        entities: discovered,
+        criteria,
+        scraper: providers.scraper,
+        llm: providers.llm,
+        strategy: companyQualifyStrategy,
+      }),
   });
   if (!qualifyResult.success)
     logger.warn({ searchId }, "Qualify failed — continuing with empty results");
-  const qualified = qualifyResult.success ? qualifyResult.data : [];
+  const qualified: QualifiedCompany[] = qualifyResult.success
+    ? qualifyResult.data
+    : [];
 
-  const enrichResult = await runEnrich({
+  const enrichResult = await trackStep({
     searchId,
-    entities: qualified,
-    providers,
-    targetEntity: criteria.targetEntity,
+    step: "enrich",
+    inputData: { entityCount: qualified.length, targetEntity: "company" },
+    run: () => enrichCompanies({ entities: qualified, email: providers.email }),
   });
   if (!enrichResult.success)
     logger.warn({ searchId }, "Enrich failed — continuing with empty results");
   return enrichResult.success ? enrichResult.data : [];
+}
+
+async function runJobOfferPipeline({
+  searchId,
+  criteria,
+  providers,
+}: {
+  searchId: string;
+  criteria: SearchCriteria;
+  providers: UseCaseProviders;
+}): Promise<EnrichedJobOffer[]> {
+  if (!providers.jobBoard?.length) {
+    logger.warn(
+      { searchId },
+      "No job board providers configured — returning empty",
+    );
+    return [];
+  }
+
+  const discoverResult = await trackStep({
+    searchId,
+    step: "discover",
+    inputData: {
+      signalSources: criteria.signalSources,
+      targetEntity: "job_offer",
+    },
+    run: () =>
+      discoverJobOffers({
+        criteria,
+        jobBoardProviders: providers.jobBoard!,
+      }),
+  });
+  if (!discoverResult.success)
+    logger.warn(
+      { searchId },
+      "Discover failed — continuing with empty results",
+    );
+  const discovered: JobPosting[] = discoverResult.success
+    ? discoverResult.data
+    : [];
+
+  const qualifyResult = await trackStep({
+    searchId,
+    step: "qualify",
+    inputData: { entityCount: discovered.length, targetEntity: "job_offer" },
+    run: () =>
+      qualify({
+        entities: discovered,
+        criteria,
+        scraper: providers.scraper,
+        llm: providers.llm,
+        strategy: jobOfferQualifyStrategy,
+      }),
+  });
+  if (!qualifyResult.success)
+    logger.warn({ searchId }, "Qualify failed — continuing with empty results");
+  const qualified: QualifiedJobOffer[] = qualifyResult.success
+    ? qualifyResult.data
+    : [];
+
+  const enrichResult = await trackStep({
+    searchId,
+    step: "enrich",
+    inputData: { entityCount: qualified.length, targetEntity: "job_offer" },
+    run: () =>
+      enrichJobOffers({ entities: qualified, company: providers.company }),
+  });
+  if (!enrichResult.success)
+    logger.warn({ searchId }, "Enrich failed — continuing with empty results");
+  return enrichResult.success ? enrichResult.data : [];
+}
+
+async function saveResults({
+  searchId,
+  results,
+  targetEntity,
+}: {
+  searchId: string;
+  results: EnrichedCompany[] | EnrichedJobOffer[];
+  targetEntity: "company" | "job_offer";
+}): Promise<Result<undefined>> {
+  if (targetEntity === "job_offer") {
+    for (const offer of results as EnrichedJobOffer[]) {
+      const result = await saveOneJobOffer({ searchId, offer });
+      if (!result.success)
+        logger.error(
+          { url: offer.url, error: result.error.message },
+          "Failed to save job offer — skipping",
+        );
+    }
+  } else {
+    for (const company of results as EnrichedCompany[]) {
+      const result = await saveOneCompany({ searchId, company });
+      if (!result.success)
+        logger.error(
+          { domain: company.domain, error: result.error.message },
+          "Failed to save company — skipping",
+        );
+    }
+  }
+  return { success: true, data: undefined };
 }
 
 async function executePipeline({
@@ -646,13 +565,18 @@ async function executePipeline({
   maxResults,
 }: ExecutePipelineOptions): Promise<void> {
   // Step 1 — blocking: no criteria = no pipeline
-  const criteriaResult = await runExtractCriteria({
+  const criteriaResult = await trackStep({
     searchId,
-    rawQuery,
-    useCaseName,
-    llm: providers.llm,
-    uiCriteria,
+    step: "extract-criteria",
+    inputData: { rawQuery, uiCriteria },
+    run: () =>
+      providers.llm.extractCriteria({
+        rawQuery,
+        useCase: useCaseName,
+        uiCriteria,
+      }),
   });
+
   if (!criteriaResult.success) {
     logger.error(
       { searchId, error: criteriaResult.error.message },
@@ -666,26 +590,22 @@ async function executePipeline({
     ? { ...criteriaResult.data, maxResults }
     : criteriaResult.data;
 
-  const persistResult = await persistCriteria({
-    searchId,
-    criteria,
-  });
+  const persistResult = await persistCriteria({ searchId, criteria });
   if (!persistResult.success)
     logger.error(
       { searchId, error: persistResult.error.message },
       "Failed to persist criteria",
     );
 
-  const results = await runSteps({
-    searchId,
-    criteria,
-    providers,
-  });
+  const results =
+    criteria.targetEntity === "job_offer"
+      ? await runJobOfferPipeline({ searchId, criteria, providers })
+      : await runCompanyPipeline({ searchId, criteria, providers });
 
   const saveResult = await saveResults({
     searchId,
     results,
-    targetEntity: criteriaResult.data.targetEntity,
+    targetEntity: criteria.targetEntity,
   });
   if (!saveResult.success)
     logger.error(
