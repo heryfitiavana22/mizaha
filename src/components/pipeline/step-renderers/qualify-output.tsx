@@ -1,14 +1,10 @@
 import { Badge } from "@/components/ui/badge";
+import type {
+  QualifiedJobOffer,
+  QualifiedCompany as QualifiedCompanySource,
+} from "@/types";
 
-type QualifiedCompany = {
-  name: string;
-  domain: string;
-  qualification: {
-    score: number;
-    reason: string;
-    matchedCriteria?: string[];
-  };
-};
+type QualifiedCompany = QualifiedCompanySource | QualifiedJobOffer;
 
 export function QualifyOutput({ data }: { data: Record<string, unknown> }) {
   const companies: QualifiedCompany[] = Array.isArray(data)
@@ -29,16 +25,26 @@ export function QualifyOutput({ data }: { data: Record<string, unknown> }) {
       </span>
       {companies.map((company) => {
         const score = company.qualification?.score ?? 0;
+        const displayName =
+          "name" in company ? company.name : company.companyName;
+        const displayDomain =
+          "domain" in company ? company.domain : company.companyDomain;
+        const key =
+          "domain" in company
+            ? company.domain
+            : (company.companyDomain ?? company.url);
         return (
           <div
-            key={company.domain}
+            key={key}
             className="flex flex-col gap-0.5 border-l-2 border-border pl-2"
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium">{company.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {company.domain}
-              </span>
+              <span className="text-xs font-medium">{displayName}</span>
+              {displayDomain && (
+                <span className="text-xs text-muted-foreground">
+                  {displayDomain}
+                </span>
+              )}
               <Badge
                 variant={score >= 0.7 ? "default" : "secondary"}
                 className="text-xs px-1.5 py-0 ml-auto"

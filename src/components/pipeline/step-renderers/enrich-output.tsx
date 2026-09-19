@@ -1,16 +1,10 @@
-type EnrichedCompany = {
-  name: string;
-  domain: string;
-  contacts: {
-    email?: string | null;
-    name?: string | null;
-    title?: string | null;
-  }[];
-};
+import type { EnrichedCompany, EnrichedJobOffer } from "@/types";
+
+type EnrichedData = EnrichedJobOffer | EnrichedCompany;
 
 export function EnrichOutput({ data }: { data: Record<string, unknown> }) {
-  const companies: EnrichedCompany[] = Array.isArray(data)
-    ? (data as EnrichedCompany[])
+  const companies: EnrichedData[] = Array.isArray(data)
+    ? (data as EnrichedData[])
     : [];
 
   if (!companies.length)
@@ -24,16 +18,26 @@ export function EnrichOutput({ data }: { data: Record<string, unknown> }) {
     <div className="flex flex-col gap-2">
       {companies.map((company) => {
         const contactCount = company.contacts?.length ?? 0;
+        const displayName =
+          "name" in company ? company.name : company.companyName;
+        const displayDomain =
+          "domain" in company ? company.domain : company.companyDomain;
+        const key =
+          "domain" in company
+            ? company.domain
+            : (company.companyDomain ?? company.url);
         return (
           <div
-            key={company.domain}
+            key={key}
             className="flex flex-col gap-0.5 border-l-2 border-border pl-2"
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium">{company.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {company.domain}
-              </span>
+              <span className="text-xs font-medium">{displayName}</span>
+              {displayDomain && (
+                <span className="text-xs text-muted-foreground">
+                  {displayDomain}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground ml-auto">
                 {contactCount} contact{contactCount !== 1 ? "s" : ""}
               </span>

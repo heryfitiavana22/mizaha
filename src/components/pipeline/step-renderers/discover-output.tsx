@@ -1,9 +1,6 @@
-type DiscoveredCompany = {
-  name: string;
-  domain: string;
-  location?: string;
-  source?: string;
-};
+import type { CompanyData, JobPosting } from "@/types";
+
+type DiscoveredCompany = CompanyData | JobPosting;
 
 export function DiscoverOutput({ data }: { data: Record<string, unknown> }) {
   const companies: DiscoveredCompany[] = Array.isArray(data)
@@ -23,15 +20,30 @@ export function DiscoverOutput({ data }: { data: Record<string, unknown> }) {
         {companies.length} entreprise{companies.length !== 1 ? "s" : ""}
       </span>
       <div className="flex flex-col gap-1 mt-1">
-        {companies.map((company) => (
-          <div key={company.domain} className="flex items-center gap-2 text-xs">
-            <span className="font-medium">{company.name}</span>
-            <span className="text-muted-foreground">{company.domain}</span>
-            {company.source && (
-              <span className="text-muted-foreground">· {company.source}</span>
-            )}
-          </div>
-        ))}
+        {companies.map((company) => {
+          const displayName =
+            "name" in company ? company.name : company.companyName;
+          const displayDomain =
+            "domain" in company ? company.domain : company.companyDomain;
+          const key =
+            "domain" in company
+              ? company.domain
+              : (company.companyDomain ?? company.url);
+
+          return (
+            <div key={key} className="flex items-center gap-2 text-xs">
+              <span className="font-medium">{displayName}</span>
+              {displayDomain && (
+                <span className="text-muted-foreground">{displayDomain}</span>
+              )}
+              {company.source && (
+                <span className="text-muted-foreground">
+                  · {company.source}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
