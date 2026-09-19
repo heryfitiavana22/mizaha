@@ -22,7 +22,8 @@ export type SignalSource =
   | "wttj"
   | "pappers_search"
   | "brave"
-  | "free_work";
+  | "free_work"
+  | "sirene_search";
 
 // ---------------------------------------------------------------------------
 // Company

@@ -141,7 +141,7 @@ async function runCompanySignalSources({
   return namedSources;
 }
 
-async function runPappersSearch({
+async function runCompanySearch({
   criteria,
   company,
 }: {
@@ -163,11 +163,10 @@ async function runPappersSearch({
   }
   return result.data.map((company) => ({
     ...company,
-    source: "pappers_search" as const,
   }));
 }
 
-async function runBraveSource({
+async function runSearchEngine({
   criteria,
   search,
   llm,
@@ -315,16 +314,17 @@ function deduplicateNamedSources(sources: NamedSource[]): NamedSource[] {
 async function collectSignalSources(
   options: DiscoverCompaniesOptions,
 ): Promise<{
-  pappersCompanies: CompanyData[];
+  companies: CompanyData[];
   namedSources: NamedSource[];
 }> {
   const { criteria, jobBoardProviders, companySignals, company } = options;
+  console.log("options", options);
 
   const hasJobBoardCompanySignal =
     criteria.signalSources.includes("france_travail");
 
-  const pappersPromise = criteria.signalSources.includes("pappers_search")
-    ? runPappersSearch({ criteria, company })
+  const companiesPromise = criteria.signalSources.includes("pappers_search")
+    ? runCompanySearch({ criteria, company })
     : Promise.resolve([] as CompanyData[]);
 
   const jobBoardPromise =
@@ -343,21 +343,21 @@ async function collectSignalSources(
     : Promise.resolve([] as NamedSource[]);
 
   const bravePromise = criteria.signalSources.includes("brave")
-    ? runBraveSource(options).then((names) =>
+    ? runSearchEngine(options).then((names) =>
         names.map((name) => ({ name, source: "brave" as const })),
       )
     : Promise.resolve([] as NamedSource[]);
 
-  const [pappersCompanies, jobBoardNamed, companySignalNamed, braveNamed] =
+  const [companies, jobBoardNamed, companySignalNamed, braveNamed] =
     await Promise.all([
-      pappersPromise,
+      companiesPromise,
       jobBoardPromise,
       companySignalsPromise,
       bravePromise,
     ]);
 
   return {
-    pappersCompanies,
+    companies,
     namedSources: deduplicateNamedSources([
       ...jobBoardNamed,
       ...companySignalNamed,
@@ -371,18 +371,16 @@ export async function discoverCompanies(
 ): Promise<Result<CompanyData[]>> {
   const { criteria, search } = options;
 
-  const { pappersCompanies, namedSources } =
-    await collectSignalSources(options);
+  const { companies, namedSources } = await collectSignalSources(options);
   const resolvedCompanies = await resolveNamesToCompanies({
     namedSources,
     search,
   });
+  console.log("companies", companies);
 
   const maxResults = criteria.maxResults ?? DEFAULT_MAX_RESULTS;
-  // SIRENE returns SIREN numbers (9 digits) as domain — skip them, no real URL
-  const validPappers = pappersCompanies.filter((c) => !/^\d+$/.test(c.domain));
   const deduplicated = deduplicateByDomain([
-    ...validPappers,
+    ...companies,
     ...resolvedCompanies,
   ]).slice(0, maxResults);
 

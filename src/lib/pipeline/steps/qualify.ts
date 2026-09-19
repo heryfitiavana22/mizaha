@@ -60,8 +60,8 @@ async function scrapeWithFallback({
   scraper: ScraperProvider;
 }): Promise<{ content: string; url: string } | null> {
   const urlsToTry = [
+    `https://${domain}`, // maybe get other pages from "/" or sitemap.xml or robots.txt in the future
     ...PRIORITY_PATHS.map((path) => `https://${domain}${path}`),
-    `https://${domain}`,
   ];
 
   for (const url of urlsToTry) {
