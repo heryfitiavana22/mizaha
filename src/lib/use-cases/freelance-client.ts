@@ -11,6 +11,7 @@ import type { UseCaseConfig } from "./index";
 const OPENAI_MODEL_ID = "gpt-5.4-mini";
 
 const braveSearch = new BraveSearchProvider();
+const firecrawlScraper = new FirecrawlScraperProvider();
 
 export const freelanceClientConfig: UseCaseConfig = {
   name: "freelance-client",
@@ -21,11 +22,8 @@ export const freelanceClientConfig: UseCaseConfig = {
   providers: {
     search: braveSearch,
     company: new SireneCompanyProvider(braveSearch),
-    scraper: new FirecrawlScraperProvider(),
-    email: new FirecrawlEmailProvider(
-      braveSearch,
-      new FirecrawlScraperProvider(),
-    ),
+    scraper: firecrawlScraper,
+    email: new FirecrawlEmailProvider(braveSearch, firecrawlScraper),
     jobBoard: [new FranceTravailProvider()],
     companySignals: [new WttjCompanyProvider()],
     llm: new VercelLLMProvider(openai(OPENAI_MODEL_ID), OPENAI_MODEL_ID),
