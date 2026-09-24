@@ -6,6 +6,12 @@ A natural language-driven company search engine. The user describes what they're
 
 ---
 
+## Demo
+
+<img src="demo/search.png" alt="Mizaha search criteria refinement interface" width="100%" />
+
+<img src="demo/result.png" alt="Mizaha completed company search results" width="100%" />
+
 ## How It Works
 
 ```text
