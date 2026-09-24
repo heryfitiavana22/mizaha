@@ -56,7 +56,7 @@ async function fetchWttjCompanies({
 }
 
 export class WttjCompanyProvider implements CompanySignalProvider {
-  readonly name = "WTTJ";
+  readonly name = "WTTJ Company Provider";
   readonly signalSource = "wttj" as const;
 
   async discoverCompanies(

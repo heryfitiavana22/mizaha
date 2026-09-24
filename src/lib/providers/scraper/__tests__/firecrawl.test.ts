@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
+import { createFirecrawlExecutor } from "@/lib/rate-limit/firecrawl-executor";
 
 vi.mock("@/env", () => ({
   env: { FIRECRAWL_API_KEY: "test-firecrawl-key" },
@@ -22,7 +23,8 @@ describe("FirecrawlScraperProvider", () => {
       markdown: "We are hiring a React developer",
     });
 
-    const provider = new FirecrawlScraperProvider();
+    const rateLimitedExecutor = createFirecrawlExecutor();
+    const provider = new FirecrawlScraperProvider(rateLimitedExecutor);
     const result = await provider.scrape("https://acme.fr");
 
     expect(result.success).toBe(true);
@@ -35,7 +37,8 @@ describe("FirecrawlScraperProvider", () => {
   it("returns failure when SDK throws", async () => {
     mockScrape.mockRejectedValueOnce(new Error("Firecrawl limit reached"));
 
-    const provider = new FirecrawlScraperProvider();
+    const rateLimitedExecutor = createFirecrawlExecutor();
+    const provider = new FirecrawlScraperProvider(rateLimitedExecutor);
     const result = await provider.scrape("https://acme.fr");
 
     expect(result.success).toBe(false);
@@ -46,7 +49,8 @@ describe("FirecrawlScraperProvider", () => {
   it("handles missing markdown and metadata gracefully", async () => {
     mockScrape.mockResolvedValueOnce({});
 
-    const provider = new FirecrawlScraperProvider();
+    const rateLimitedExecutor = createFirecrawlExecutor();
+    const provider = new FirecrawlScraperProvider(rateLimitedExecutor);
     const result = await provider.scrape("https://acme.fr");
 
     expect(result.success).toBe(true);

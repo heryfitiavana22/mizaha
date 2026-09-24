@@ -7,11 +7,13 @@ import { VercelLLMProvider } from "@/lib/providers/llm/vercel";
 import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
 import { BraveSearchProvider } from "@/lib/providers/search/brave";
 import type { UseCaseConfig } from "./index";
+import { createFirecrawlExecutor } from "../rate-limit/firecrawl-executor";
 
 const OPENAI_MODEL_ID = "gpt-5.4-mini";
 
 const braveSearch = new BraveSearchProvider();
-const firecrawlScraper = new FirecrawlScraperProvider();
+const rateLimitedExecutor = createFirecrawlExecutor();
+const firecrawlScraper = new FirecrawlScraperProvider(rateLimitedExecutor);
 
 export const freelanceClientConfig: UseCaseConfig = {
   name: "freelance-client",
