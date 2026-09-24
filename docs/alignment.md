@@ -40,7 +40,7 @@ The LLM (in `extract-criteria`) produces a `SearchCriteria` object that includes
 - `targetEntity`: what we're looking for (`"company"` or `"job_offer"`)
 - `signalSources`: which specialized sources to activate (`france_travail`, `wttj`, `pappers_search`, `brave`)
 - `searchStrategies`: Brave queries (only for news/funding signals — NOT for discovery)
-- `qualificationCriteria`: what Claude verifies per entity
+- `qualificationCriteria`: what LLM verifies per entity
 
 The `discover` step activates sources in parallel based on `signalSources`:
 
@@ -60,11 +60,11 @@ For `targetEntity = "job_offer"`: FreeWork + France Travail return `JobPosting[]
 
 `targetEntity` changes the behavior of every step:
 
-| Step     | `"company"`                           | `"job_offer"`                                |
-| -------- | ------------------------------------- | -------------------------------------------- |
-| discover | returns CompanyData[]                 | returns JobPosting[]                         |
-| qualify  | Firecrawl scrapes site, Claude scores | Claude scores posting directly (no scraping) |
-| enrich   | extract email from scraped content    | add company data from Pappers                |
+| Step     | `"company"`                        | `"job_offer"`                             |
+| -------- | ---------------------------------- | ----------------------------------------- |
+| discover | returns CompanyData[]              | returns JobPosting[]                      |
+| qualify  | Firecrawl scrapes site, LLM scores | LLM scores posting directly (no scraping) |
+| enrich   | extract email from scraped content | add company data from Pappers             |
 
 ### 4. Email finding — no Hunter
 

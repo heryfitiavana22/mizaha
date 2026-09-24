@@ -25,11 +25,11 @@ This single field changes the behavior of discover, qualify, and enrich.
 
 | Step               | What the human does                    | What the system does                                         |
 | ------------------ | -------------------------------------- | ------------------------------------------------------------ |
-| 1. Define criteria | Thinks in their head                   | Chat → Claude extracts structured criteria                   |
+| 1. Define criteria | Thinks in their head                   | Chat → LLM extracts structured criteria                      |
 | 2. Search          | Browse LinkedIn, job boards for hours  | Multi-source discover (France Travail, WTTJ, Pappers, Brave) |
-| 3. Qualify         | Visits each site or reads each posting | Firecrawl scrape + Claude scores and explains                |
+| 3. Qualify         | Visits each site or reads each posting | Firecrawl scrape + LLM scores and explains                   |
 | 4. Enrich          | Searches for contact / company info    | Scrape team page / Pappers lookup                            |
-| 5. Contact         | Writes a personalized message          | Claude generates a draft — the human sends                   |
+| 5. Contact         | Writes a personalized message          | LLM generates a draft — the human sends                      |
 
 **Steps 1 and 5 remain human.**
 **Steps 2, 3, 4 are fully automated.**

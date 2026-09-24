@@ -19,8 +19,8 @@ User types in natural language
   Output: list of companies OR list of job offers (depends on targetEntity)
   ↓
 [Step 3 — qualify]
-  For companies: Firecrawl scrapes site → Claude scores vs qualificationCriteria
-  For job offers: Claude scores the posting content directly (no scraping needed)
+  For companies: Firecrawl scrapes site → LLM scores vs qualificationCriteria
+  For job offers: LLM scores the posting content directly (no scraping needed)
   Threshold: score ≥ 0.5 to pass
   scrapedContent is passed to enrich to avoid double scraping
   ↓
@@ -84,7 +84,7 @@ France Travail API → job postings matching criteria (CDI/CDD fallback)
 Filter postings with empty description
 Deduplicate by URL
   ↓
-Qualify each posting (Claude scores directly — no scraping needed)
+Qualify each posting (LLM scores directly — no scraping needed)
   ↓
 Enrich: add company data from SIRENE
   ↓
