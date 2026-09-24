@@ -1,10 +1,10 @@
 export interface RateLimitResult {
   allowed: boolean;
-  /** Délai (ms) avant qu'une nouvelle tentative ait une chance de passer. 0 si allowed. */
+  /** Delay (ms) before a new attempt has a chance to succeed. 0 if allowed. */
   retryAfterMs: number;
 }
 
 export interface RateLimiter {
-  /** Tente de consommer un slot, sans jamais attendre. */
+  /** Attempts to consume a slot without waiting. */
   tryAcquire(key: string): Promise<RateLimitResult>;
 }

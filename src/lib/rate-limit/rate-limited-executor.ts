@@ -1,26 +1,24 @@
 import type { RateLimiter } from "./rate-limiter";
 
 export class RateLimitTimeoutError extends Error {
-  constructor(
-    message = "Rate limit: temps d'attente maximal dépassé (file saturée)",
-  ) {
+  constructor(message = "Rate limit: max wait time exceeded (queue full)") {
     super(message);
     this.name = "RateLimitTimeoutError";
   }
 }
 
 export interface RateLimitedExecutorConfig {
-  /** Clé passée au limiter (ex: "global"). */
+  /** Key passed to the limiter (e.g. "global"). */
   key: string;
-  /** Attente totale max (slots + retries). Doit rester < maxDuration de la fonction. */
+  /** Total max wait (slots + retries). Must stay < function maxDuration. */
   maxTotalWaitMs: number;
   maxRetries: number;
-  /** Délai de base du backoff exponentiel quand le service ne donne pas de retry-after. */
+  /** Base delay for exponential backoff when the service does not provide retry-after. */
   baseDelayMs: number;
   maxJitterMs: number;
-  /** Le service distant a-t-il répondu par un rate limit ? */
+  /** Did the remote service respond with a rate limit? */
   isRateLimitError: (error: unknown) => boolean;
-  /** Extrait le délai imposé par le service distant, ou null. */
+  /** Extracts the delay imposed by the remote service, or null. */
   getRetryAfterMs?: (error: unknown) => number | null;
 }
 
