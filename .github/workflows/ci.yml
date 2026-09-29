@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:password@localhost:5434/mizaha
+      OPENAI_API_KEY: dummy-openai-key
+      BRAVE_SEARCH_API_KEY: dummy-brave-key
+      PAPPERS_API_KEY: dummy-pappers-key
+      FIRECRAWL_API_KEY: dummy-firecrawl-key
+      FRANCE_TRAVAIL_CLIENT_ID: dummy-ft-id
+      FRANCE_TRAVAIL_CLIENT_SECRET: dummy-ft-secret
+      UPSTASH_REDIS_REST_URL: https://example.com
+      UPSTASH_REDIS_REST_TOKEN: dummy-upstash-token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test:all
