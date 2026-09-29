@@ -3,6 +3,7 @@
 Database: **PostgreSQL + pgvector**
 ORM: **Drizzle**
 Local dev: **Docker** (image `pgvector/pgvector:pg16`)
+Integration tests: **testcontainers** — ephemeral `pgvector/pgvector:pg16` per run (see `src/tests/setup/testcontainers.global.ts`), never touches dev DB
 
 ---
 

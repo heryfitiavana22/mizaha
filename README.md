@@ -166,8 +166,8 @@ pnpm db:migrate   # Apply pending migrations
 pnpm db:studio    # Open Drizzle Studio
 
 # Tests
-pnpm test         # Unit tests
-pnpm test:int     # Integration tests (requires Docker DB)
+pnpm test         # Unit tests (no DB)
+pnpm test:int     # Integration tests (ephemeral pgvector via testcontainers)
 pnpm test:all     # All tests
 ```
 

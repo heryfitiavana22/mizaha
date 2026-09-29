@@ -99,7 +99,8 @@
 │   ├── tests/                            # Shared test utilities
 │   │   ├── fixtures/                     # Reusable test data (e.g.: fake company)
 │   │   ├── mocks/                        # HTTP mocks, provider mocks
-│   │   └── helpers/                      # Test utility functions
+│   │   ├── helpers/                      # Test utility functions (resetTestDb uses TRUNCATE CASCADE)
+│   │   └── setup/                        # Vitest globalSetup — testcontainers (ephemeral pgvector)
 │   │
 │   └── env.ts                            # Env var validation (@t3-oss/env-nextjs + zod)
 │

@@ -241,7 +241,7 @@ src/tests/                   → shared test utilities
 ### Test Types
 
 **Unit** (`*.test.ts`) — one function in isolation, everything else mocked
-**Integration** (`*.int.test.ts`) — multiple modules together, real local DB but mocked providers
+**Integration** (`*.int.test.ts`) — multiple modules together, ephemeral pgvector via testcontainers (no dev DB), mocked providers
 **E2E** — completely ignored (costs real API credits)
 
 ### File Naming
@@ -253,12 +253,12 @@ discover.int.test.ts    → integration
 
 ### What We Test
 
-| What              | Type        | Why                                          |
-| ----------------- | ----------- | -------------------------------------------- |
-| Pipeline steps    | Unit        | Pure functions → zero mocks needed           |
-| Utils             | Unit        | Pure by definition → always tested           |
-| Provider adapters | Unit        | HTTP mock — validate response transformation |
-| Full pipeline     | Integration | Real local DB + mocked providers             |
+| What              | Type        | Why                                                      |
+| ----------------- | ----------- | -------------------------------------------------------- |
+| Pipeline steps    | Unit        | Pure functions → zero mocks needed                       |
+| Utils             | Unit        | Pure by definition → always tested                       |
+| Provider adapters | Unit        | HTTP mock — validate response transformation             |
+| Full pipeline     | Integration | Ephemeral pgvector via testcontainers + mocked providers |
 
 ### What We Do NOT Test
 

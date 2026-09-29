@@ -63,6 +63,7 @@ The LLM is used for:
 | PostgreSQL + pgvector | Database  | Relational + vector search in a single system                        |
 | Docker (local)        | Local dev | 1 lightweight container — no Supabase local (too heavy)              |
 | Drizzle ORM           | ORM       | TypeScript native, close to SQL, better pgvector support than Prisma |
+| testcontainers        | Int tests | Ephemeral `pgvector/pgvector:pg16` — no dev DB pollution, CI-ready   |
 
 **Local Docker**:
 
@@ -70,6 +71,8 @@ The LLM is used for:
 # Single container, official pgvector image
 image: pgvector/pgvector:pg16
 ```
+
+**Integration tests**: `src/tests/setup/testcontainers.global.ts` starts one ephemeral container per run, enables `vector` extension, runs `drizzle-orm/postgres-js/migrator`. Dev DB (`localhost:5434`) is never touched. `pnpm test:int` needs Docker daemon but not `pnpm db:start`.
 
 **Production**: To be decided. Do not anticipate before it's needed.
 
@@ -93,15 +96,16 @@ n8n comes when the pipeline is stable and needs to be modifiable without touchin
 
 ## Developer Tooling
 
-| Tool                | Role                            | Reason                                                             |
-| ------------------- | ------------------------------- | ------------------------------------------------------------------ |
-| pnpm                | Package manager                 | Faster than npm/yarn, strict dependency resolution, disk efficient |
-| ESLint              | Static analysis                 | Catches bugs and enforces rules at development time                |
-| Prettier            | Code formatter                  | Uniform formatting, no debates — format on save                    |
-| Husky + lint-staged | Pre-commit hooks                | Runs ESLint + Prettier on staged files only before each commit     |
-| commitlint          | Commit message validation       | Enforces Conventional Commits format                               |
-| pino + pino-pretty  | Structured logging              | JSON logs in production, human-readable in development             |
-| @t3-oss/env-nextjs  | Environment variable validation | Zod-validated — app refuses to start if a required var is missing  |
+| Tool                    | Role                            | Reason                                                             |
+| ----------------------- | ------------------------------- | ------------------------------------------------------------------ |
+| pnpm                    | Package manager                 | Faster than npm/yarn, strict dependency resolution, disk efficient |
+| ESLint                  | Static analysis                 | Catches bugs and enforces rules at development time                |
+| Prettier                | Code formatter                  | Uniform formatting, no debates — format on save                    |
+| Husky + lint-staged     | Pre-commit hooks                | Runs ESLint + Prettier on staged files only before each commit     |
+| commitlint              | Commit message validation       | Enforces Conventional Commits format                               |
+| pino + pino-pretty      | Structured logging              | JSON logs in production, human-readable in development             |
+| @t3-oss/env-nextjs      | Environment variable validation | Zod-validated — app refuses to start if a required var is missing  |
+| Vitest + testcontainers | Testing                         | Unit (no DB) + integration (ephemeral pgvector, mocked providers)  |
 
 ---
 

@@ -54,8 +54,8 @@ pnpm db:migrate   # apply pending migrations
 pnpm db:studio    # open Drizzle Studio (DB browser)
 
 # Tests (Vitest)
-pnpm test                                     # unit tests only (excludes *.int.test.ts)
-pnpm test:int                                 # integration tests (requires Docker DB running)
+pnpm test                                     # unit tests only (excludes *.int.test.ts, no DB)
+pnpm test:int                                 # integration tests (ephemeral pgvector via testcontainers, no db:start needed)
 pnpm test:all                                 # all tests
 pnpm test src/lib/pipeline/steps/discover     # run a single test file by path
 pnpm test -- --reporter=verbose               # verbose output
@@ -153,7 +153,7 @@ Tests live in a `__tests__/` subfolder within the module they test (not a top-le
 
 ```text
 src/lib/pipeline/steps/__tests__/discover.test.ts      → unit test
-src/lib/pipeline/steps/__tests__/discover.int.test.ts  → integration test (real local DB, mocked providers)
+src/lib/pipeline/steps/__tests__/discover.int.test.ts  → integration test (ephemeral pgvector via testcontainers, mocked providers)
 ```
 
-No E2E tests — they cost real API credits.
+No E2E tests — they cost real API credits. Integration tests never touch the dev DB (`src/tests/setup/testcontainers.global.ts` starts `pgvector/pgvector:pg16`).
