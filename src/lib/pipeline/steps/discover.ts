@@ -318,7 +318,6 @@ async function collectSignalSources(
   namedSources: NamedSource[];
 }> {
   const { criteria, jobBoardProviders, companySignals, company } = options;
-  console.log("options", options);
 
   const hasJobBoardCompanySignal =
     criteria.signalSources.includes("france_travail");
@@ -376,7 +375,6 @@ export async function discoverCompanies(
     namedSources,
     search,
   });
-  console.log("companies", companies);
 
   const maxResults = criteria.maxResults ?? DEFAULT_MAX_RESULTS;
   const deduplicated = deduplicateByDomain([

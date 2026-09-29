@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FirecrawlScraperProvider } from "@/lib/providers/scraper/firecrawl";
-import { createFirecrawlExecutor } from "@/lib/rate-limit/firecrawl-executor";
+import type { RateLimitedExecutor } from "@/lib/rate-limit/rate-limited-executor";
 
 vi.mock("@/env", () => ({
   env: { FIRECRAWL_API_KEY: "test-firecrawl-key" },
@@ -15,7 +15,17 @@ vi.mock("@mendable/firecrawl-js", () => ({
   }),
 }));
 
+function createFakeExecutor(): RateLimitedExecutor {
+  return {
+    execute: async <T>(fn: () => Promise<T>) => fn(),
+  } as unknown as RateLimitedExecutor;
+}
+
 describe("FirecrawlScraperProvider", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("returns scraped content on success", async () => {
     mockScrape.mockResolvedValueOnce({
       success: true,
@@ -23,8 +33,7 @@ describe("FirecrawlScraperProvider", () => {
       markdown: "We are hiring a React developer",
     });
 
-    const rateLimitedExecutor = createFirecrawlExecutor();
-    const provider = new FirecrawlScraperProvider(rateLimitedExecutor);
+    const provider = new FirecrawlScraperProvider(createFakeExecutor());
     const result = await provider.scrape("https://acme.fr");
 
     expect(result.success).toBe(true);
@@ -37,8 +46,7 @@ describe("FirecrawlScraperProvider", () => {
   it("returns failure when SDK throws", async () => {
     mockScrape.mockRejectedValueOnce(new Error("Firecrawl limit reached"));
 
-    const rateLimitedExecutor = createFirecrawlExecutor();
-    const provider = new FirecrawlScraperProvider(rateLimitedExecutor);
+    const provider = new FirecrawlScraperProvider(createFakeExecutor());
     const result = await provider.scrape("https://acme.fr");
 
     expect(result.success).toBe(false);
@@ -49,8 +57,7 @@ describe("FirecrawlScraperProvider", () => {
   it("handles missing markdown and metadata gracefully", async () => {
     mockScrape.mockResolvedValueOnce({});
 
-    const rateLimitedExecutor = createFirecrawlExecutor();
-    const provider = new FirecrawlScraperProvider(rateLimitedExecutor);
+    const provider = new FirecrawlScraperProvider(createFakeExecutor());
     const result = await provider.scrape("https://acme.fr");
 
     expect(result.success).toBe(true);

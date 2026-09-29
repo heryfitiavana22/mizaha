@@ -7,6 +7,7 @@ export const fakeCompany: CompanyData = {
   location: "75001 Paris",
   employeeCount: 20,
   foundedAt: "2019-01-01",
+  source: "pappers_search",
 };
 
 export const fakeQualifiedCompany: QualifiedCompany = {
