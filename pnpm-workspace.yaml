@@ -6,3 +6,6 @@ allowBuilds:
   sharp: true
   ssh2: true
   unrs-resolver: true
+
+overrides:
+  "@opentelemetry/api": "1.9.0"
