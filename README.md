@@ -50,15 +50,16 @@ Adding a new use case = one config file in `src/lib/use-cases/`. Nothing else ch
 
 ## Tech Stack
 
-| Layer               | Technology                            | Why                                          |
-| ------------------- | ------------------------------------- | -------------------------------------------- |
-| **Framework**       | Next.js (App Router) + Vercel AI SDK  | Streaming chat, industry standard            |
-| **UI**              | shadcn/ui + AI Elements + json-render | AI-native components, generative UI          |
-| **LLM**             | OpenAI API                            | Model-agnostic via Vercel AI SDK adapter     |
-| **Database**        | PostgreSQL + pgvector (Docker)        | Relational + vector search                   |
-| **ORM**             | Drizzle                               | TypeScript native, better pgvector support   |
-| **Logging**         | pino                                  | Structured JSON (prod), human-readable (dev) |
-| **Package Manager** | pnpm                                  | Fast, strict dependency resolution           |
+| Layer               | Technology                            | Why                                                               |
+| ------------------- | ------------------------------------- | ----------------------------------------------------------------- |
+| **Framework**       | Next.js (App Router) + Vercel AI SDK  | Streaming chat, industry standard                                 |
+| **UI**              | shadcn/ui + AI Elements + json-render | AI-native components, generative UI                               |
+| **LLM**             | OpenAI API                            | Model-agnostic via Vercel AI SDK adapter                          |
+| **Database**        | PostgreSQL + pgvector (Docker)        | Relational + vector search                                        |
+| **ORM**             | Drizzle                               | TypeScript native, better pgvector support                        |
+| **Testing**         | Vitest + testcontainers               | Unit (no DB) + integration (ephemeral pgvector, mocked providers) |
+| **Logging**         | pino                                  | Structured JSON (prod), human-readable (dev)                      |
+| **Package Manager** | pnpm                                  | Fast, strict dependency resolution                                |
 
 ## Provider Architecture
 
