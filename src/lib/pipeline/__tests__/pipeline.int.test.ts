@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import {
   entities,
@@ -10,7 +10,9 @@ import {
 import { resetTestDb } from "@/tests/helpers/db";
 import {
   makeMockCompanyProvider,
+  makeMockCompanySignalProvider,
   makeMockEmailProvider,
+  makeMockJobBoardProvider,
   makeMockLLMProvider,
   makeMockScraperProvider,
   makeMockSearchProvider,
@@ -31,6 +33,8 @@ function makeTestProviders() {
     scraper: makeMockScraperProvider(),
     email: makeMockEmailProvider(),
     llm: makeMockLLMProvider(),
+    jobBoard: [makeMockJobBoardProvider()],
+    companySignals: [makeMockCompanySignalProvider()],
   };
 }
 
@@ -61,10 +65,6 @@ describe("runPipeline (integration)", () => {
         providers: makeTestProviders(),
       },
     });
-  });
-
-  afterAll(async () => {
-    await resetTestDb();
   });
 
   it("sets search status to completed after a successful run", async () => {

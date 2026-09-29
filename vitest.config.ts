@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     environment: "node",
+    globalSetup: ["./src/tests/setup/testcontainers.global.ts"],
     setupFiles: ["./src/tests/vitest-setup.ts"],
   },
 });
